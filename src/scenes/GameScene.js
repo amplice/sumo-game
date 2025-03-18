@@ -247,60 +247,52 @@ export default class GameScene extends Phaser.Scene {
             yoyo: true
         });
         
-        // Create push line and arc to show push area
+        // Create rectangle push area instead of cone
         const startX = pusher.x;
         const startY = pusher.y;
-        const endX = startX + pushDirX * 80;
-        const endY = startY + pushDirY * 80;
-        
-        // Calculate angle for the cone
         const angle = Math.atan2(pushDirY, pushDirX);
         
-        // Create cone to show push range - centered properly on the player
-        const pushCone = this.add.graphics();
-        pushCone.fillStyle(0x00FF00, 0.3);
-        pushCone.beginPath();
-        pushCone.moveTo(startX, startY);
+        // Parameters for the push rectangle
+        const pushDistance = 70;  // Shorter detection range
+        const pushWidth = 40;     // Width of push area
         
-        // Draw arc to show 30 degree push cone
-        const radius = 100; // Push range
-        // Convert 30 degrees to radians: 30 * (Math.PI/180) = Math.PI/6
-        pushCone.arc(startX, startY, radius, angle - Math.PI/6, angle + Math.PI/6, false);
-        pushCone.closePath();
-        pushCone.fillPath();
+        // Use a container with a rectangle for rotation
+        const container = this.add.container(startX, startY);
+        
+        // Create a rectangle for push area, centered properly
+        const pushArea = this.add.graphics();
+        pushArea.fillStyle(0x00FF00, 0.3);
+        pushArea.fillRect(0, -pushWidth/2, pushDistance, pushWidth);
+        
+        // Add to container and rotate
+        container.add(pushArea);
+        container.rotation = angle;
         
         // Animate the push effect
         this.tweens.add({
-            targets: pushCone,
+            targets: container,
             alpha: 0,
             duration: 300,
             onComplete: () => {
-                pushCone.destroy();
+                container.destroy();
             }
         });
         
-        // Improved hit detection that matches the visual cone
-        // Check if target is actually within the cone area
+        // Hit detection for rectangular area
         const dx = target.x - startX;
         const dy = target.y - startY;
         
-        // Calculate distance to target
-        const distToTarget = Math.sqrt(dx * dx + dy * dy);
+        // Calculate the projection of the target onto the push direction vector
+        const projection = dx * pushDirX + dy * pushDirY;
         
-        // Calculate angle between pusher's direction and target
-        const targetAngle = Math.atan2(dy, dx);
+        // Calculate perpendicular distance from the center line
+        const perpDist = Math.abs(dx * pushDirY - dy * pushDirX);
         
-        // Find the difference between angles (normalized to -PI to PI)
-        let angleDiff = targetAngle - angle;
-        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-        
-        // Check if within cone angle (30 degrees = PI/6 radians) and range
-        const hitSuccessful = (Math.abs(angleDiff) <= Math.PI/6) && (distToTarget <= radius);
+        // Check if within the rectangle (in front of pusher, within width/2 of center line, within range)
+        const hitSuccessful = (projection > 0) && (projection <= pushDistance) && (perpDist <= pushWidth/2);
         
         if (hitSuccessful) {
             // Hit successful! Show impact effect
-            // Visual feedback for target - highlight and shake the triangle
             this.tweens.add({
                 targets: target.indicator,
                 scaleX: 1.2,
@@ -317,6 +309,7 @@ export default class GameScene extends Phaser.Scene {
             // Apply push force with tweening for smooth movement
             const targetStartX = target.x;
             const targetStartY = target.y;
+            // Still push back the full 100 pixels
             const targetEndX = targetStartX + pushDirX * 100;
             const targetEndY = targetStartY + pushDirY * 100;
             
@@ -328,7 +321,6 @@ export default class GameScene extends Phaser.Scene {
                 duration: 300,
                 ease: 'Power2',
                 onComplete: () => {
-                    // Restore original color after push animation completes
                     target.indicator.setFillStyle(originalColor);
                 }
             });

@@ -2,25 +2,26 @@ export default class Player {
     constructor(scene, x, y, sprite, color) {
         this.scene = scene;
         
-        // Create invisible physics body with reduced size for better hitbox
+        // Create invisible physics body with circle hitbox
         this.sprite = scene.physics.add.sprite(x, y, sprite);
-        this.sprite.setVisible(false); // Hide the sprite
-        this.sprite.setScale(0.3);     // Smaller hitbox
-        this.sprite.body.setSize(30, 30); // Fixed size hitbox
+        this.sprite.setVisible(false);
+        this.sprite.setScale(0.3);
+        this.sprite.body.setCircle(15); // Circle hitbox
         
-        this.direction = 'down'; // Default direction
-        this.directionAngle = 0; // Angle in degrees
+        this.direction = 'down';
+        this.directionAngle = 0;
         
-        // Make triangle smaller and more equilateral
+        // Main circle visual
+        this.circle = scene.add.circle(x, y, 10, color);
+        
+        // Small direction indicator triangle
         this.indicator = scene.add.triangle(
-            x, y,
-            -8, -6,  // more equilateral shape
-            8, -6,
-            0, 10
-            ,
-            color
+            x, y + 10, // Position slightly offset from circle center
+            -4, -3,
+            4, -3,
+            0, 6,
+            0x000000 // Black triangle
         );
-        this.indicator.setOrigin(0.5, 0.5);
         
         // Action states
         this.canMove = true;
@@ -34,9 +35,10 @@ export default class Player {
     }
     
     updatePosition() {
-        // Update indicator position to follow the sprite
-        this.indicator.x = this.sprite.x;
-        this.indicator.y = this.sprite.y;
+        // Update visual elements to follow the sprite
+        this.circle.x = this.sprite.x;
+        this.circle.y = this.sprite.y;
+        this.updateIndicator();
     }
     
     setDirection(direction) {
@@ -60,8 +62,13 @@ export default class Player {
     }
     
     updateIndicator() {
-        // Rotate the direction indicator to match the current direction
-        this.indicator.rotation = Phaser.Math.DegToRad(this.directionAngle);
+        // Calculate position on the edge of the circle
+        const radians = Phaser.Math.DegToRad(this.directionAngle);
+        const distance = 10; // Distance from center to indicator
+        
+        this.indicator.x = this.sprite.x + Math.sin(radians) * distance;
+        this.indicator.y = this.sprite.y + Math.cos(radians) * distance;
+        this.indicator.rotation = radians;
     }
     
     get x() {
