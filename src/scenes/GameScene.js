@@ -48,9 +48,11 @@ export default class GameScene extends Phaser.Scene {
         this.actionKeys = {
             // Player 1 actions
             p1Push: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
+            p1Throw: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT),
             
             // Player 2 actions
-            p2Push: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ZERO)
+            p2Push: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ZERO),
+            p2Throw: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE)
         };
         
         // Add UI elements
@@ -136,6 +138,39 @@ export default class GameScene extends Phaser.Scene {
                 this.attemptPush(this.player2, this.player1);
             }
         }
+        
+        // Player 1 Throw Action - just press to start, executes automatically after windup
+        if (Phaser.Input.Keyboard.JustDown(this.actionKeys.p1Throw)) {
+            if (this.player1.startThrow()) {
+                // Set up callback for when throw executes automatically
+                this.time.delayedCall(this.player1.throwWindupDuration, () => {
+                    // Execute the throw AND check for hit in the same callback
+                    if (this.player1.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
+                        // Execute the throw animation/visuals first
+                        this.player1.executeThrow();
+                        // THEN check for hit detection
+                        this.attemptThrow(this.player1, this.player2);
+                    }
+                });
+            }
+        }
+        
+        // Player 2 Throw Action (only in two player mode)
+        if (this.gameMode === 'twoPlayer') {
+            if (Phaser.Input.Keyboard.JustDown(this.actionKeys.p2Throw)) {
+                if (this.player2.startThrow()) {
+                    // Set up callback for when throw executes automatically
+                    this.time.delayedCall(this.player2.throwWindupDuration, () => {
+                        if (this.player2.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
+                            // Execute the throw animation/visuals first
+                            this.player2.executeThrow();
+                            // THEN check for hit detection
+                            this.attemptThrow(this.player2, this.player1);
+                        }
+                    });
+                }
+            }
+        }
     }
 
     // Function to update AI player (Player 2 in single player mode)
@@ -210,10 +245,27 @@ export default class GameScene extends Phaser.Scene {
             if (distToPlayer < 100) {
                 // If player is near edge, more likely to push
                 const pushChance = isPlayerNearEdge ? 0.8 : 0.5;
+                const throwChance = isPlayerNearEdge ? 0.2 : 0.3;
                 
-                if (Math.random() < pushChance) {
+                const randomAction = Math.random();
+                
+                if (randomAction < pushChance) {
                     if (this.player2.startPush()) {
                         this.attemptPush(this.player2, this.player1);
+                    }
+                } else if (randomAction < pushChance + throwChance) {
+                    // Try to throw if aligned with player
+                    if (this.player2.isInCone(this.player1, 45, 100)) {
+                        if (this.player2.startThrow()) {
+                            // The throw will execute automatically after windup
+                            // No need to manually call executeThrow() as it's now automatic
+                            this.time.delayedCall(this.player2.throwWindupDuration, () => {
+                                // Check if still winding up (not canceled by push)
+                                if (this.player2.isThrowWindingUp) {
+                                    this.attemptThrow(this.player2, this.player1);
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -292,6 +344,11 @@ export default class GameScene extends Phaser.Scene {
         const hitSuccessful = (projection > 0) && (projection <= pushDistance) && (perpDist <= pushWidth/2);
         
         if (hitSuccessful) {
+            // If target is winding up for a throw, cancel it
+            if (target.isThrowWindingUp) {
+                target.cancelThrow();
+            }
+            
             // Hit successful! Show impact effect
             this.tweens.add({
                 targets: target.indicator,
@@ -329,17 +386,95 @@ export default class GameScene extends Phaser.Scene {
 
     // Function to attempt a throw
     attemptThrow(thrower, target) {
-        // Check if target is within the throw cone (45 degree angle)
-        if (thrower.isInCone(target, 45, 120)) {
-            // Check if target is in counter mode
-            if (target.counterActive) {
-                // If countering, target throws the thrower instead
-                this.endRound(target === this.player1 ? 'Player 1' : 'Player 2', true);
-            } else {
-                // Successful throw
-                this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
-            }
+        // Always hit if distance is reasonable (within 100px)
+        const dx = target.x - thrower.x;
+        const dy = target.y - thrower.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Skip if too far away
+        if (distance > 100) {
+            console.log("Throw failed: Target too far away");
+            return false;
         }
+        
+        // Direction vectors for each direction
+        const directionVectors = {
+            'up': { x: 0, y: -1 },
+            'up-right': { x: 0.7071, y: -0.7071 },
+            'right': { x: 1, y: 0 },
+            'down-right': { x: 0.7071, y: 0.7071 },
+            'down': { x: 0, y: 1 },
+            'down-left': { x: -0.7071, y: 0.7071 },
+            'left': { x: -1, y: 0 },
+            'up-left': { x: -0.7071, y: -0.7071 }
+        };
+        
+        // Get direction vector
+        const dirVector = directionVectors[thrower.direction];
+        
+        // Normalize the vector to target
+        const targetVector = {
+            x: dx / distance,
+            y: dy / distance
+        };
+        
+        // Calculate dot product (measures how aligned the vectors are)
+        const dotProduct = dirVector.x * targetVector.x + dirVector.y * targetVector.y;
+        
+        // Dot product > 0.7071 means angle < 45 degrees (within cone)
+        // For debugging, log all values
+        console.log(`Throw: distance=${distance.toFixed(1)}, direction=${thrower.direction}, dotProduct=${dotProduct.toFixed(2)}`);
+        
+        // Successfully hit if dot product is positive (within 90 degree cone - making it easier)
+        if (dotProduct > 0) {
+            console.log("THROW HIT!");
+            
+            // Successful throw - create a throwing animation
+            
+            // Make the thrower flash
+            this.tweens.add({
+                targets: thrower.circle,
+                alpha: 0.5,
+                duration: 100,
+                yoyo: true,
+                repeat: 1
+            });
+            
+            // Make target spin to show being thrown
+            this.tweens.add({
+                targets: target.circle,
+                scale: 1.3,
+                angle: 360,
+                duration: 500,
+                onComplete: () => {
+                    target.circle.setScale(1);
+                    target.circle.angle = 0;
+                    
+                    // End round with throw victory
+                    this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
+                }
+            });
+            
+            // Display throw effect line between players
+            const graphics = this.add.graphics();
+            graphics.lineStyle(4, 0xFF8800, 1);
+            graphics.lineBetween(thrower.x, thrower.y, target.x, target.y);
+            
+            // Fade out the line
+            this.tweens.add({
+                targets: graphics,
+                alpha: 0,
+                duration: 400,
+                onComplete: () => {
+                    graphics.destroy();
+                }
+            });
+            
+            return true;
+        }
+        
+        console.log("Throw missed: Target not in correct direction");
+        return false;
     }
 
     // Function to handle player movement
@@ -411,7 +546,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Function to end the round and display the winner
-    endRound(winner) {
+    endRound(winner, byThrow = false) {
         // Update win counts
         if (winner === 'Player 1') {
             this.player1Wins++;
@@ -422,8 +557,9 @@ export default class GameScene extends Phaser.Scene {
         // Update score text
         this.scoreText.setText(`P1: ${this.player1Wins}  P2: ${this.player2Wins}`);
         
-        // Display winner
-        this.winnerText.setText(`${winner} wins round ${this.round}!\n(pushed opponent out)`);
+        // Display winner with appropriate message
+        const winType = byThrow ? '(threw opponent)' : '(pushed opponent out)';
+        this.winnerText.setText(`${winner} wins round ${this.round}!\n${winType}`);
         this.winnerText.setVisible(true);
         
         // Check if match is over (best of 3)
@@ -462,9 +598,11 @@ export default class GameScene extends Phaser.Scene {
         // Reset player states
         this.player1.canMove = true;
         this.player1.sprite.clearTint();
+        this.player1.cancelThrow();
         
         this.player2.canMove = true;
         this.player2.sprite.clearTint();
+        this.player2.cancelThrow();
         
         // Hide winner text
         this.winnerText.setVisible(false);

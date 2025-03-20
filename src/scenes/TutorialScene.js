@@ -18,17 +18,26 @@ export default class TutorialScene extends Phaser.Scene {
             "Player 1:",
             "- Movement: W,A,S,D",
             "- Push: SPACE",
+            "- Throw: SHIFT (has 1-second windup)",
             "",
             "Player 2:",
             "- Movement: Arrow Keys",
             "- Push: Numpad 0",
+            "- Throw: Numpad 1 (has 1-second windup)",
             "",
             "RULES:",
             "- Push your opponent out of the ring",
+            "- Use Throw for an instant win (requires 1-second windup)",
             "- Best of 3 rounds wins the match",
             "",
             "Your facing direction (shown by the pointer) determines",
-            "where your push action will be aimed."
+            "where your actions will be aimed.",
+            "",
+            "TIPS:",
+            "- You can't move during a throw windup",
+            "- If pushed during a throw windup, the throw is cancelled",
+            "- Once started, a throw cannot be cancelled voluntarily",
+            "- Push has a shorter range but faster execution"
         ];
 
         // Add instructions text
