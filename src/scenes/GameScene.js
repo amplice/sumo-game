@@ -386,17 +386,6 @@ export default class GameScene extends Phaser.Scene {
 
     // Function to attempt a throw
     attemptThrow(thrower, target) {
-        // Always hit if distance is reasonable (within 100px)
-        const dx = target.x - thrower.x;
-        const dy = target.y - thrower.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Skip if too far away
-        if (distance > 100) {
-            console.log("Throw failed: Target too far away");
-            return false;
-        }
-        
         // Direction vectors for each direction
         const directionVectors = {
             'up': { x: 0, y: -1 },
@@ -412,6 +401,19 @@ export default class GameScene extends Phaser.Scene {
         // Get direction vector
         const dirVector = directionVectors[thrower.direction];
         
+        // Calculate dx/dy and distance
+        const dx = target.x - thrower.x;
+        const dy = target.y - thrower.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Maximum throw range - match the visual cone size
+        const maxThrowRange = 100;
+        
+        // Skip if too far away
+        if (distance > maxThrowRange) {
+            return false;
+        }
+        
         // Normalize the vector to target
         const targetVector = {
             x: dx / distance,
@@ -421,14 +423,11 @@ export default class GameScene extends Phaser.Scene {
         // Calculate dot product (measures how aligned the vectors are)
         const dotProduct = dirVector.x * targetVector.x + dirVector.y * targetVector.y;
         
-        // Dot product > 0.7071 means angle < 45 degrees (within cone)
-        // For debugging, log all values
-        console.log(`Throw: distance=${distance.toFixed(1)}, direction=${thrower.direction}, dotProduct=${dotProduct.toFixed(2)}`);
+        // Define cone angle - use 0.7071 for approx 45 degrees (cos(45°) = 0.7071)
+        const coneAngleCosine = 0.7071;
         
-        // Successfully hit if dot product is positive (within 90 degree cone - making it easier)
-        if (dotProduct > 0) {
-            console.log("THROW HIT!");
-            
+        // Check if within the throw cone (cos(angle) > 0.7071 means angle < 45 degrees)
+        if (dotProduct > coneAngleCosine) {
             // Successful throw - create a throwing animation
             
             // Make the thrower flash
@@ -473,7 +472,6 @@ export default class GameScene extends Phaser.Scene {
             return true;
         }
         
-        console.log("Throw missed: Target not in correct direction");
         return false;
     }
 

@@ -159,20 +159,20 @@ export default class Player {
             this.canMove = true;
             this.throwWindupCircle.setVisible(false);
             
-            // Calculate correct angles based on direction
-            const directionToAngle = {
-                'up': 270,
-                'up-right': 315,
-                'right': 0,
-                'down-right': 45,
-                'down': 90,
-                'down-left': 135,
-                'left': 180,
-                'up-left': 225
+            // Direction vectors for each direction
+            const directionVectors = {
+                'up': { x: 0, y: -1 },
+                'up-right': { x: 0.7071, y: -0.7071 },
+                'right': { x: 1, y: 0 },
+                'down-right': { x: 0.7071, y: 0.7071 },
+                'down': { x: 0, y: 1 },
+                'down-left': { x: -0.7071, y: 0.7071 },
+                'left': { x: -1, y: 0 },
+                'up-left': { x: -0.7071, y: -0.7071 }
             };
             
-            const directionAngle = directionToAngle[this.direction];
-            const radians = Phaser.Math.DegToRad(directionAngle);
+            // Get direction vector
+            const dirVector = directionVectors[this.direction];
             
             // Create a cone graphic for throw area
             if (this.throwCone) {
@@ -183,48 +183,51 @@ export default class Player {
             this.throwCone = this.scene.add.graphics();
             this.throwCone.fillStyle(0xFF8800, 0.5);
             
-            // Draw cone shape - match actual hitbox dimensions
-            const coneLength = 100; // Exact hitbox range
-            const coneAngle = 45; // 45 degree cone (matches hitbox)
-            const halfConeAngle = coneAngle / 2;
-            
-            // Starting point
+            // Draw cone shape with exact 45-degree angle
             const startX = this.x;
             const startY = this.y;
+            const coneLength = 100;
             
-            // Calculate the angles for the cone edges in radians
-            const leftAngleRad = radians - Phaser.Math.DegToRad(halfConeAngle);
-            const rightAngleRad = radians + Phaser.Math.DegToRad(halfConeAngle);
+            // Calculate unit vector perpendicular to direction
+            const perpX = -dirVector.y;
+            const perpY = dirVector.x;
             
-            // Draw a triangle for the cone
+            // Cone width at maximum distance (use tangent of 22.5 degrees = 0.4142)
+            const halfConeWidth = coneLength * 0.4142;
+            
+            // Calculate the left and right edges of the cone
+            const leftEdgeX = startX + dirVector.x * coneLength + perpX * halfConeWidth;
+            const leftEdgeY = startY + dirVector.y * coneLength + perpY * halfConeWidth;
+            const rightEdgeX = startX + dirVector.x * coneLength - perpX * halfConeWidth;
+            const rightEdgeY = startY + dirVector.y * coneLength - perpY * halfConeWidth;
+            
+            // Draw the cone
             this.throwCone.beginPath();
             this.throwCone.moveTo(startX, startY);
             
-            // Calculate end points on the arc
-            const endLeftX = startX + Math.cos(leftAngleRad) * coneLength;
-            const endLeftY = startY + Math.sin(leftAngleRad) * coneLength;
-            
-            const endRightX = startX + Math.cos(rightAngleRad) * coneLength;
-            const endRightY = startY + Math.sin(rightAngleRad) * coneLength;
-            
-            // Draw an arc between the two points
-            this.throwCone.lineTo(endLeftX, endLeftY);
-            
-            // Draw points along the arc for a smoother curve
+            // Create smooth arc for the cone edge
             const steps = 10;
-            for (let i = 1; i < steps; i++) {
-                const arcAngle = leftAngleRad + (rightAngleRad - leftAngleRad) * (i / steps);
-                const arcX = startX + Math.cos(arcAngle) * coneLength;
-                const arcY = startY + Math.sin(arcAngle) * coneLength;
-                this.throwCone.lineTo(arcX, arcY);
+            
+            // Left half of the cone
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const x = startX + dirVector.x * coneLength * t + perpX * halfConeWidth * t;
+                const y = startY + dirVector.y * coneLength * t + perpY * halfConeWidth * t;
+                this.throwCone.lineTo(x, y);
             }
             
-            this.throwCone.lineTo(endRightX, endRightY);
-            this.throwCone.lineTo(startX, startY);
+            // Right half of the cone
+            for (let i = steps; i >= 0; i--) {
+                const t = i / steps;
+                const x = startX + dirVector.x * coneLength * t - perpX * halfConeWidth * t;
+                const y = startY + dirVector.y * coneLength * t - perpY * halfConeWidth * t;
+                this.throwCone.lineTo(x, y);
+            }
+            
             this.throwCone.closePath();
             this.throwCone.fillPath();
             
-            // Add outline
+            // Add outline to make the range more visible
             this.throwCone.lineStyle(2, 0xFF5500, 0.8);
             this.throwCone.strokePath();
             
