@@ -167,7 +167,7 @@ export default class GameScene extends Phaser.Scene {
                 // Set up callback for when throw executes automatically
                 this.time.delayedCall(gameConfig.throw.windupDuration, () => {
                     // Execute the throw AND check for hit in the same callback
-                    if (this.player1.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
+                    if (this.player1 && this.player1.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
                         // Execute the throw animation/visuals first
                         this.player1.executeThrow();
                         // THEN check for hit detection
@@ -183,7 +183,7 @@ export default class GameScene extends Phaser.Scene {
                 if (this.player2.startThrow()) {
                     // Set up callback for when throw executes automatically
                     this.time.delayedCall(gameConfig.throw.windupDuration, () => {
-                        if (this.player2.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
+                        if (this.player2 && this.player2.isThrowWindingUp) {  // Check if still winding up (not canceled by push)
                             // Execute the throw animation/visuals first
                             this.player2.executeThrow();
                             // THEN check for hit detection
@@ -300,13 +300,15 @@ export default class GameScene extends Phaser.Scene {
         const pushConfig = gameConfig.push;
         
         // Visual feedback for pusher - highlight the triangle
-        this.tweens.add({
-            targets: pusher.indicator,
-            scaleX: pushConfig.feedback.scaleAmount,
-            scaleY: pushConfig.feedback.scaleAmount,
-            duration: pushConfig.feedback.duration,
-            yoyo: true
-        });
+        if (pusher && pusher.indicator) {
+            this.tweens.add({
+                targets: pusher.indicator,
+                scaleX: pushConfig.feedback.scaleAmount,
+                scaleY: pushConfig.feedback.scaleAmount,
+                duration: pushConfig.feedback.duration,
+                yoyo: true
+            });
+        }
         
         // Create rectangle push area instead of cone
         const startX = pusher.x;
@@ -331,7 +333,9 @@ export default class GameScene extends Phaser.Scene {
             alpha: 0,
             duration: pushConfig.visual.duration,
             onComplete: () => {
-                container.destroy();
+                if (container && container.active) {
+                    container.destroy();
+                }
             }
         });
         
@@ -348,16 +352,38 @@ export default class GameScene extends Phaser.Scene {
         // Check if within the rectangle (in front of pusher, within width/2 of center line, within range)
         const hitSuccessful = (projection > 0) && (projection <= pushConfig.range) && (perpDist <= pushConfig.width/2);
         
-        if (hitSuccessful) {
+        if (hitSuccessful && target) {
+            // If target is in counter active state, reverse the push!
+            if (target.isCounterActive) {
+                // Counter the push - reverse direction and push the original pusher back
+                this.counterPush(target, pusher, -pushDirX, -pushDirY);
+                return;
+            }
+            
             // If target is winding up for a throw or counter, cancel it
             if (target.isThrowWindingUp) {
                 target.cancelThrow();
             }
             if (target.isCounterWindingUp) {
                 target.cancelCounter();
+                
+                // Extra pushback during counter windup
+                const extraFactor = 1.5; // 50% further
+                this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance * extraFactor);
+                return;
             }
             
-            // Hit successful! Show impact effect
+            // Normal push
+            this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance);
+        }
+    }
+    
+    // Function to apply a push with visual effects
+    applyPush(pusher, target, dirX, dirY, distance) {
+        const pushConfig = gameConfig.push;
+        
+        // Hit successful! Show impact effect
+        if (target.indicator) {
             this.tweens.add({
                 targets: target.indicator,
                 scaleX: 1.2,
@@ -366,54 +392,83 @@ export default class GameScene extends Phaser.Scene {
                 yoyo: true,
                 repeat: 2
             });
-            
-            // Make target's triangle flash red
-            const originalColor = target.indicator.fillColor;
+        }
+        
+        // Make target's triangle flash red
+        const originalColor = target.indicator ? target.indicator.fillColor : 0xFFFFFF;
+        if (target.indicator) {
             target.indicator.setFillStyle(pushConfig.feedback.targetFlashColor);
-            
-            // Apply push force with tweening for smooth movement
-            const targetStartX = target.x;
-            const targetStartY = target.y;
-            
-            // Determine push distance - extra far if target is countering
-            const pushDistance = (target.isCounterActive) ? 
-                                pushConfig.counterPushDistance : 
-                                pushConfig.distance;
-            
-            // Calculate push destination
-            const targetEndX = targetStartX + pushDirX * pushDistance;
-            const targetEndY = targetStartY + pushDirY * pushDistance;
-            
-            // If target is countering, add a visual effect to show the extra push
-            if (target.isCounterActive) {
-                // Create a trail effect behind the pushed player
-                const trail = this.add.graphics();
-                trail.fillStyle(pushConfig.trail.color, pushConfig.trail.alpha);
-                trail.fillCircle(target.x, target.y, pushConfig.trail.size);
-                
-                // Fade out the trail
-                this.tweens.add({
-                    targets: trail,
-                    alpha: 0,
-                    duration: pushConfig.trail.duration,
-                    onComplete: () => {
-                        trail.destroy();
-                    }
-                });
-            }
-            
-            // Animate the target being pushed
-            this.tweens.add({
-                targets: [target],
-                x: targetEndX,
-                y: targetEndY,
-                duration: pushConfig.feedback.targetPushDuration,
-                ease: 'Power2',
-                onComplete: () => {
+        }
+        
+        // Apply push force with tweening for smooth movement
+        const targetStartX = target.x;
+        const targetStartY = target.y;
+        
+        // Calculate push destination
+        const targetEndX = targetStartX + dirX * distance;
+        const targetEndY = targetStartY + dirY * distance;
+        
+        // Animate the target being pushed
+        this.tweens.add({
+            targets: [target],
+            x: targetEndX,
+            y: targetEndY,
+            duration: pushConfig.feedback.targetPushDuration,
+            ease: 'Power2',
+            onComplete: () => {
+                if (target && target.indicator) {
                     target.indicator.setFillStyle(originalColor);
                 }
-            });
-        }
+            }
+        });
+    }
+    
+    // Function to handle counter-push (when active counter counters a push)
+    counterPush(defender, attacker, dirX, dirY, flashColor) {
+        const pushConfig = gameConfig.push;
+        const counterFeedback = gameConfig.counter.feedback;
+        
+        // Visual effect for counter - flash around defender
+        const counterFlash = this.add.circle(
+            defender.x, 
+            defender.y, 
+            counterFeedback.counterFlashSize, 
+            counterFeedback.counterFlashColor, 
+            counterFeedback.counterFlashAlpha
+        );
+        
+        // Flash and expand
+        this.tweens.add({
+            targets: counterFlash,
+            scale: counterFeedback.counterFlashScale,
+            alpha: 0,
+            duration: counterFeedback.counterFlashDuration,
+            onComplete: () => {
+                if (counterFlash && counterFlash.active) {
+                    counterFlash.destroy();
+                }
+            }
+        });
+        
+        // Create lightning effect between players
+        const lightning = this.add.graphics();
+        lightning.lineStyle(4, 0xFFFF00, 1);
+        lightning.lineBetween(defender.x, defender.y, attacker.x, attacker.y);
+        
+        // Flash the lightning
+        this.tweens.add({
+            targets: lightning,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => {
+                if (lightning && lightning.active) {
+                    lightning.destroy();
+                }
+            }
+        });
+        
+        // Apply a stronger push to the attacker (counter push is stronger)
+        this.applyPush(defender, attacker, dirX, dirY, pushConfig.distance * 1.5);
     }
 
     // Function to attempt a throw
@@ -429,6 +484,9 @@ export default class GameScene extends Phaser.Scene {
             'left': { x: -1, y: 0 },
             'up-left': { x: -0.7071, y: -0.7071 }
         };
+        
+        // Check if thrower and target are valid
+        if (!thrower || !target) return false;
         
         // Get direction vector
         const dirVector = directionVectors[thrower.direction];
@@ -480,7 +538,9 @@ export default class GameScene extends Phaser.Scene {
                     alpha: 0,
                     duration: counterFeedback.counterFlashDuration,
                     onComplete: () => {
-                        counterFlash.destroy();
+                        if (counterFlash && counterFlash.active) {
+                            counterFlash.destroy();
+                        }
                     }
                 });
                 
@@ -528,7 +588,9 @@ export default class GameScene extends Phaser.Scene {
                     alpha: 0,
                     duration: counterFeedback.lightningDuration,
                     onComplete: () => {
-                        lightning.destroy();
+                        if (lightning && lightning.active) {
+                            lightning.destroy();
+                        }
                     }
                 });
                 
@@ -536,48 +598,58 @@ export default class GameScene extends Phaser.Scene {
                 target.endCounter();
                 
                 // Make thrower spin to show being thrown
-                this.tweens.add({
-                    targets: thrower.circle,
-                    scale: 1.3,
-                    angle: 360,
-                    duration: throwConfig.feedback.spinDuration,
-                    onComplete: () => {
-                        thrower.circle.setScale(1);
-                        thrower.circle.angle = 0;
-                        
-                        // End round with counter victory
-                        const winner = target === this.player1 ? 'Player 1' : 'Player 2';
-                        this.endRound(winner, true);
-                    }
-                });
+                if (thrower.circle) {
+                    this.tweens.add({
+                        targets: thrower.circle,
+                        scale: 1.3,
+                        angle: 360,
+                        duration: throwConfig.feedback.spinDuration,
+                        onComplete: () => {
+                            if (thrower && thrower.circle) {
+                                thrower.circle.setScale(1);
+                                thrower.circle.angle = 0;
+                                
+                                // End round with counter victory
+                                const winner = target === this.player1 ? 'Player 1' : 'Player 2';
+                                this.endRound(winner, true);
+                            }
+                        }
+                    });
+                }
                 
                 return true;
             }
             
             // Normal throw (no counter) - create a throwing animation
             // Make the thrower flash
-            this.tweens.add({
-                targets: thrower.circle,
-                alpha: throwConfig.feedback.flashAlpha,
-                duration: throwConfig.feedback.flashDuration,
-                yoyo: true,
-                repeat: 1
-            });
+            if (thrower.circle) {
+                this.tweens.add({
+                    targets: thrower.circle,
+                    alpha: throwConfig.feedback.flashAlpha,
+                    duration: throwConfig.feedback.flashDuration,
+                    yoyo: true,
+                    repeat: 1
+                });
+            }
             
             // Make target spin to show being thrown
-            this.tweens.add({
-                targets: target.circle,
-                scale: 1.3,
-                angle: 360,
-                duration: throwConfig.feedback.spinDuration,
-                onComplete: () => {
-                    target.circle.setScale(1);
-                    target.circle.angle = 0;
-                    
-                    // End round with throw victory
-                    this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
-                }
-            });
+            if (target.circle) {
+                this.tweens.add({
+                    targets: target.circle,
+                    scale: 1.3,
+                    angle: 360,
+                    duration: throwConfig.feedback.spinDuration,
+                    onComplete: () => {
+                        if (target && target.circle) {
+                            target.circle.setScale(1);
+                            target.circle.angle = 0;
+                            
+                            // End round with throw victory
+                            this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
+                        }
+                    }
+                });
+            }
             
             // Display throw effect line between players
             const graphics = this.add.graphics();
@@ -594,7 +666,9 @@ export default class GameScene extends Phaser.Scene {
                 alpha: 0,
                 duration: throwConfig.feedback.lineFadeDuration,
                 onComplete: () => {
-                    graphics.destroy();
+                    if (graphics && graphics.active) {
+                        graphics.destroy();
+                    }
                 }
             });
             
@@ -635,6 +709,9 @@ export default class GameScene extends Phaser.Scene {
             }).setOrigin(0.5)
               .setInteractive({ useHandCursor: true })
               .on('pointerup', () => {
+                  // Cancel all timers and tweens to prevent callbacks firing after scene change
+                  this.tweens.killAll();
+                  this.time.removeAllEvents();
                   this.scene.start('MenuScene');
               });
         } else {
@@ -649,6 +726,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Function to reset players for a new round
     resetRound() {
+        // Cancel all active tweens to prevent callbacks firing during or after reset
+        this.tweens.killAll();
+        
         // Reset player positions
         this.player1.x = 300;
         this.player1.y = 400;

@@ -286,7 +286,7 @@ export default class AIPlayer {
     }
     
     /**
-     * Defensive strategy - prioritize safety
+     * Defensive strategy - less passive, more tactical retreats
      */
     defensiveStrategy() {
         // Calculate vectors
@@ -300,34 +300,96 @@ export default class AIPlayer {
         };
         const distToCenter = Math.sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y);
         
-        // When in danger, try to move away from opponent toward center
+        // Calculate opponent's vector to center
+        const opponentToCenter = {
+            x: this.ringCenter.x - this.opponent.x,
+            y: this.ringCenter.y - this.opponent.y
+        };
+        const opponentDistToCenter = Math.sqrt(opponentToCenter.x * opponentToCenter.x + opponentToCenter.y * opponentToCenter.y);
+        
+        // Even in defensive mode, look for opportunities to push
+        if (distToOpponent < gameConfig.push.range * 0.9 && !this.selfNearEdge) {
+            // If not in immediate danger from the edge, still try to push
+            if (Math.random() < 0.65) {
+                if (this.player.startPush()) {
+                    this.scene.attemptPush(this.player, this.opponent);
+                }
+            }
+        }
+        
+        // When in extreme danger, move away from opponent toward center
         if (this.selfNearEdge) {
-            // Move directly toward center when near edge
-            this.targetPosition = {
-                x: this.ringCenter.x,
-                y: this.ringCenter.y
-            };
+            if (opponentDistToCenter < distToCenter && Math.random() < 0.4) {
+                // Sometimes try to move around the opponent instead of straight to center
+                // This helps avoid getting cornered
+                
+                // Calculate perpendicular vector to create a curved escape path
+                const perpX = -dy / distToOpponent;
+                const perpY = dx / distToOpponent;
+                
+                // Choose direction randomly
+                const direction = Math.random() < 0.5 ? 1 : -1;
+                
+                // Move in an arc rather than straight to center
+                this.targetPosition = {
+                    x: this.player.x + toCenter.x * 0.5 + perpX * direction * 70,
+                    y: this.player.y + toCenter.y * 0.5 + perpY * direction * 70
+                };
+            } else {
+                // Move toward center but avoid opponent
+                // Don't go straight to center - add some angle to avoid predictability
+                const centerAngle = Math.atan2(toCenter.y, toCenter.x);
+                const angleOffset = (Math.random() * 0.6 - 0.3); // -0.3 to +0.3 radians
+                const moveDistance = distToCenter * 0.5;
+                
+                this.targetPosition = {
+                    x: this.player.x + Math.cos(centerAngle + angleOffset) * moveDistance,
+                    y: this.player.y + Math.sin(centerAngle + angleOffset) * moveDistance
+                };
+            }
         } else {
-            // Move to safe position (away from opponent, toward center)
-            // Blend between moving directly away from opponent and toward center
-            // Use centerBias from config to determine how much to prioritize center movement
-            const blendFactor = Math.min(distToCenter / (this.ringRadius * 0.8), 1) * 
-                              gameConfig.ai.states.defensive.centerBias;
-            
-            this.targetPosition = {
-                x: this.player.x - dx * (1 - blendFactor) + toCenter.x * blendFactor * 0.5,
-                y: this.player.y - dy * (1 - blendFactor) + toCenter.y * blendFactor * 0.5
-            };
+            // Still in a good position - be more strategic
+            // Sometimes move laterally to find a better angle
+            if (Math.random() < 0.4) {
+                // Calculate perpendicular vector for sideways movement
+                const perpX = -dy / distToOpponent;
+                const perpY = dx / distToOpponent;
+                
+                // Choose direction randomly
+                const direction = Math.random() < 0.5 ? 1 : -1;
+                
+                // Move sideways with a bit of backwards movement
+                this.targetPosition = {
+                    x: this.player.x - dx * 0.3 + perpX * direction * 60,
+                    y: this.player.y - dy * 0.3 + perpY * direction * 60
+                };
+            } else {
+                // Move to safer position with some randomness
+                // Blend between moving away from opponent and toward center
+                const blendFactor = Math.min(distToCenter / (this.ringRadius * 0.8), 1) * 
+                                  gameConfig.ai.states.defensive.centerBias;
+                
+                // Add slight random variation to create less predictable movement
+                const randomX = (Math.random() * 60) - 30;
+                const randomY = (Math.random() * 60) - 30;
+                
+                this.targetPosition = {
+                    x: this.player.x - dx * (1 - blendFactor) + toCenter.x * blendFactor * 0.5 + randomX,
+                    y: this.player.y - dy * (1 - blendFactor) + toCenter.y * blendFactor * 0.5 + randomY
+                };
+            }
         }
         
         // When opponent is throw winding-up and in range, try to counter
         if (this.opponent.isThrowWindingUp && distToOpponent < gameConfig.throw.range * 1.2) {
             if (this.player.startCounter()) {
                 // Counter activates automatically
+                return;
             }
         }
-        // If very close to opponent, push to create space
-        else if (distToOpponent < gameConfig.push.range * 0.8) {
+        
+        // Even in defensive mode, look for opportunities to push
+        if (distToOpponent < gameConfig.push.range * 0.8) {
             if (this.player.startPush()) {
                 this.scene.attemptPush(this.player, this.opponent);
             }
@@ -346,6 +408,17 @@ export default class AIPlayer {
         // Get direction to opponent
         const dirX = dx / distToOpponent;
         const dirY = dy / distToOpponent;
+        
+        // If opponent is throwing, attempt a counter with high priority
+        if (this.opponent.isThrowWindingUp) {
+            // Higher chance to counter based on difficulty
+            const counterChance = 0.8 * this.difficultySettings[this.difficulty].decisionQuality;
+            if (Math.random() < counterChance) {
+                if (this.player.startCounter()) {
+                    return; // Counter activates automatically
+                }
+            }
+        }
         
         // If opponent is near edge, position to push them out
         if (this.opponentNearEdge) {
@@ -366,23 +439,26 @@ export default class AIPlayer {
                 y: this.opponent.y - normY * 60
             };
             
-            // Push when in position and in range
-            if (distToOpponent < gameConfig.push.range * 0.9) {
+            // Push when in position and in range - increased probability from implicit random check to explicit 85% chance
+            if (distToOpponent < gameConfig.push.range * 0.9 && Math.random() < 0.85) {
                 if (this.player.startPush()) {
                     this.scene.attemptPush(this.player, this.opponent);
                 }
             }
         } 
         // Try to throw if opponent is not near edge but in range
-        else if (distToOpponent < gameConfig.throw.range * 0.9 && !this.opponent.isCounterActive && !this.opponent.isCounterWindingUp) {
+        else if (distToOpponent < gameConfig.throw.range * 0.9 && 
+                !this.opponent.isCounterActive && 
+                !this.opponent.isCounterWindingUp) {
             // Position to face opponent directly
             this.targetPosition = {
                 x: this.opponent.x - dirX * 60, // Stand a bit away
                 y: this.opponent.y - dirY * 60
             };
             
-            // Throw when we're facing the right direction
-            if (this.isAlignedWithOpponent() && Math.random() < gameConfig.ai.states.aggressive.throwFrequency) {
+            // Throw when we're facing the right direction - reduced throw frequency
+            const throwChance = 0.7 * this.difficultySettings[this.difficulty].decisionQuality;
+            if (this.isAlignedWithOpponent() && Math.random() < throwChance) {
                 if (this.player.startThrow()) {
                     this.scene.time.delayedCall(gameConfig.throw.windupDuration, () => {
                         if (this.player.isThrowWindingUp) {
@@ -390,6 +466,12 @@ export default class AIPlayer {
                             this.scene.attemptThrow(this.player, this.opponent);
                         }
                     });
+                }
+            }
+            // If not throwing, try pushing
+            else if (distToOpponent < gameConfig.push.range * 0.9 && Math.random() < 0.7) {
+                if (this.player.startPush()) {
+                    this.scene.attemptPush(this.player, this.opponent);
                 }
             }
         }
@@ -401,6 +483,13 @@ export default class AIPlayer {
                 x: this.player.x + (this.predictedPosition.x - this.player.x) * predictiveFactor - dirX * 50,
                 y: this.player.y + (this.predictedPosition.y - this.player.y) * predictiveFactor - dirY * 50
             };
+            
+            // If within push range, have a high chance to push
+            if (distToOpponent < gameConfig.push.range * 0.9 && Math.random() < 0.75) {
+                if (this.player.startPush()) {
+                    this.scene.attemptPush(this.player, this.opponent);
+                }
+            }
         }
     }
     
@@ -408,22 +497,44 @@ export default class AIPlayer {
      * Counter strategy - used when opponent is winding up a throw
      */
     counterStrategy() {
+        // Check how long the opponent has been winding up
+        // Only counter if we think we can get it off in time
+        // Higher difficulties have better reaction timing
+        
         // If opponent is throwing, counter immediately with priority based on difficulty
-        if (this.opponent.isThrowWindingUp && 
-            Math.random() < gameConfig.ai.states.counterReady.counterPriority * 
-                         this.difficultySettings[this.difficulty].decisionQuality) {
-            if (this.player.startCounter()) {
-                // Counter activates automatically
-                return;
+        if (this.opponent.isThrowWindingUp) {
+            // Base counter chance on difficulty and how long the throw has been winding up
+            // This makes AI more likely to counter at the right time rather than too early
+            const counterChance = gameConfig.ai.states.counterReady.counterPriority * 
+                                this.difficultySettings[this.difficulty].decisionQuality;
+            
+            if (Math.random() < counterChance) {
+                if (this.player.startCounter()) {
+                    // Counter activates automatically
+                    return;
+                }
             }
         }
         
         // If still here, either counter failed to start or we need another strategy
+        // In most cases, try to push instead of counter
+        const dx = this.opponent.x - this.player.x;
+        const dy = this.opponent.y - this.player.y;
+        const distToOpponent = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distToOpponent < gameConfig.push.range) {
+            if (this.player.startPush()) {
+                this.scene.attemptPush(this.player, this.opponent);
+                return;
+            }
+        }
+        
+        // Otherwise use defensive strategy
         this.defensiveStrategy();
     }
     
     /**
-     * Neutral strategy - balanced approach
+     * Neutral strategy - more aggressive approach with variable behavior
      */
     neutralStrategy() {
         // Calculate distance to opponent
@@ -431,53 +542,100 @@ export default class AIPlayer {
         const dy = this.opponent.y - this.player.y;
         const distToOpponent = Math.sqrt(dx * dx + dy * dy);
         
-        // In neutral state, maintain moderate distance and look for opportunities
+        // Determine if we should directly engage or try to flank based on situation
+        // Add some randomness to make behavior less predictable
+        const directEngagement = Math.random() < 0.7;
         
-        // Calculate ideal distance (not too close, not too far)
-        const idealDistance = gameConfig.ai.states.neutral.idealDistance;
+        // Calculate vectors to opponent and center
+        const toCenter = {
+            x: this.ringCenter.x - this.player.x,
+            y: this.ringCenter.y - this.player.y
+        };
         
-        // Calculate vector to maintain ideal distance
         let targetX, targetY;
         
-        if (distToOpponent < idealDistance - 20) {
-            // Too close, back away slightly
-            targetX = this.player.x - dx * 0.5;
-            targetY = this.player.y - dy * 0.5;
-        } else if (distToOpponent > idealDistance + 20) {
-            // Too far, move closer
-            targetX = this.player.x + dx * 0.5;
-            targetY = this.player.y + dy * 0.5;
-        } else {
-            // Good distance, circle around opponent
-            // Calculate perpendicular vector for circling
-            const perpX = -dy / distToOpponent;
-            const perpY = dx / distToOpponent;
+        // Prevent backing away too much - use a much closer ideal distance
+        const closeCombatDistance = gameConfig.push.range * 0.9; // Stay within push range
+        
+        if (this.selfNearEdge) {
+            // When near edge, move toward center but at an angle toward/away from opponent
+            // Don't move directly to center, mix with opponent position
+            const centerWeight = 0.7; // Prioritize getting away from edge
+            const opponentWeight = 0.3; // But still keep opponent in mind
             
-            // Circle direction depends on position in ring
-            const clockwise = (this.player.x - this.ringCenter.x) * (this.opponent.y - this.ringCenter.y) - 
-                             (this.player.y - this.ringCenter.y) * (this.opponent.x - this.ringCenter.x) > 0;
+            const angleFactor = (Math.random() < 0.5) ? -0.3 : 0.3; // Random angle adjustment
             
-            targetX = this.player.x + (clockwise ? perpX : -perpX) * 80;
-            targetY = this.player.y + (clockwise ? perpY : -perpY) * 80;
+            targetX = this.player.x + toCenter.x * centerWeight + dx * angleFactor;
+            targetY = this.player.y + toCenter.y * centerWeight + dy * angleFactor;
+        }
+        // Close combat approach - get in push range and stay there
+        else if (distToOpponent > closeCombatDistance || directEngagement) {
+            // Calculate how aggressively to approach
+            const approachFactor = 0.4 + (Math.random() * 0.4); // Between 0.4 and 0.8
+            
+            if (distToOpponent > closeCombatDistance * 2) {
+                // Far away - approach directly but with slight angle variation
+                const angle = Math.atan2(dy, dx) + (Math.random() * 0.5 - 0.25); // ±0.25 radians variation
+                const moveDistance = approachFactor * distToOpponent;
+                
+                targetX = this.player.x + Math.cos(angle) * moveDistance;
+                targetY = this.player.y + Math.sin(angle) * moveDistance;
+            } else {
+                // Close enough - move to striking distance with some angle variation
+                const circleAmount = (Math.random() < 0.4) ? 0.4 : 0; // Sometimes circle, sometimes direct
+                
+                // Calculate perpendicular vector for subtle circling
+                const perpX = -dy / distToOpponent;
+                const perpY = dx / distToOpponent;
+                
+                // Move toward opponent with slight sideways motion for more organic movement
+                targetX = this.player.x + dx * approachFactor + perpX * circleAmount * 40;
+                targetY = this.player.y + dy * approachFactor + perpY * circleAmount * 40;
+            }
+        } 
+        // Flanking approach - try to get an angle
+        else {
+            // Get a vector perpendicular to the line between opponent and center
+            const opponentToCenter = {
+                x: this.ringCenter.x - this.opponent.x,
+                y: this.ringCenter.y - this.opponent.y
+            };
+            
+            // Normalize this vector
+            const otcLength = Math.sqrt(opponentToCenter.x * opponentToCenter.x + opponentToCenter.y * opponentToCenter.y);
+            const normOtcX = opponentToCenter.x / otcLength;
+            const normOtcY = opponentToCenter.y / otcLength;
+            
+            // Get perpendicular vector (rotated 90 degrees)
+            const perpX = -normOtcY;
+            const perpY = normOtcX;
+            
+            // Choose direction randomly but with persistence
+            const flankDirection = (Math.random() < 0.9) ? 1 : -1; // 90% chance to maintain current direction
+            
+            // Move to a position that's both close to opponent and at an angle to center
+            // This creates a flanking movement that tries to get behind the opponent toward the edge
+            targetX = this.opponent.x + perpX * flankDirection * 70 - normOtcX * 30;
+            targetY = this.opponent.y + perpY * flankDirection * 70 - normOtcY * 30;
         }
         
-        // Adjust target to avoid going near the edge
+        // Adjust target to avoid going near the edge - more permissive to allow closer edge play
         const targetToCenter = {
             x: this.ringCenter.x - targetX,
             y: this.ringCenter.y - targetY
         };
         const targetDistToCenter = Math.sqrt(targetToCenter.x * targetToCenter.x + targetToCenter.y * targetToCenter.y);
         
-        if (targetDistToCenter > this.ringRadius - 80) {
-            // Too close to edge, adjust toward center
-            const adjustment = (targetDistToCenter - (this.ringRadius - 80)) / targetDistToCenter;
-            targetX += targetToCenter.x * adjustment;
-            targetY += targetToCenter.y * adjustment;
+        if (targetDistToCenter > this.ringRadius - 40) { // Smaller safety margin
+            // Too close to edge, adjust toward center but not as much as before
+            const adjustment = (targetDistToCenter - (this.ringRadius - 40)) / targetDistToCenter;
+            targetX += targetToCenter.x * adjustment * 0.7; // Only 70% correction to allow more aggressive play
+            targetY += targetToCenter.y * adjustment * 0.7;
         }
         
         this.targetPosition = { x: targetX, y: targetY };
         
-        // Choose actions based on the situation
+        // Choose actions based on the situation - more aggressive behavior
         
         // If opponent is countering, don't throw
         if (this.opponent.isCounterActive || this.opponent.isCounterWindingUp) {
@@ -488,8 +646,16 @@ export default class AIPlayer {
                 }
             }
         } 
-        // If opponent is very close, consider a throw
-        else if (distToOpponent < gameConfig.throw.range * 0.7 && Math.random() < 0.3 && this.isAlignedWithOpponent()) {
+        // If opponent is throwing, counter only if the timing is right
+        else if (this.opponent.isThrowWindingUp) {
+            if (Math.random() < 0.7 * this.difficultySettings[this.difficulty].decisionQuality) {
+                if (this.player.startCounter()) {
+                    // Counter activates automatically
+                }
+            }
+        }
+        // More frequent throw attempts when in position
+        else if (distToOpponent < gameConfig.throw.range * 0.8 && Math.random() < 0.3 && this.isAlignedWithOpponent()) {
             if (this.player.startThrow()) {
                 this.scene.time.delayedCall(gameConfig.throw.windupDuration, () => {
                     if (this.player.isThrowWindingUp) {
@@ -499,14 +665,8 @@ export default class AIPlayer {
                 });
             }
         }
-        // Occasionally counter to catch opponent throws
-        else if (Math.random() < 0.1 && !this.player.isThrowWindingUp) {
-            if (this.player.startCounter()) {
-                // Counter activates automatically
-            }
-        }
-        // Push if in good position
-        else if (distToOpponent < gameConfig.push.range * 0.8 && Math.random() < 0.4) {
+        // Higher push probability - most common action
+        else if (distToOpponent < gameConfig.push.range && Math.random() < 0.7) {
             if (this.player.startPush()) {
                 this.scene.attemptPush(this.player, this.opponent);
             }
@@ -550,9 +710,17 @@ export default class AIPlayer {
     }
     
     /**
-     * Moves the AI character toward the current target position
+     * Moves the AI character toward the current target position with more organic movement
      */
     moveToTarget() {
+        // Skip movement if the player is casting an action that prevents movement
+        if (!this.player.canMove || 
+            this.player.isThrowWindingUp || 
+            this.player.isCounterWindingUp || 
+            this.player.isCounterActive) {
+            return;
+        }
+        
         // Calculate direction vector to target
         const dx = this.targetPosition.x - this.player.x;
         const dy = this.targetPosition.y - this.player.y;
@@ -564,10 +732,20 @@ export default class AIPlayer {
             return;
         }
         
+        // Add subtle movement variations for more organic movement
+        // Calculate a "jitter" factor based on the AI difficulty - lower difficulties have more erratic movement
+        const jitterFactor = 0.2 - (this.difficultySettings[this.difficulty].positionAccuracy * 0.15);
+        
+        // Apply small random adjustments to movement vector
+        const jitterX = (Math.random() * 2 - 1) * jitterFactor * gameConfig.player.aiSpeed;
+        const jitterY = (Math.random() * 2 - 1) * jitterFactor * gameConfig.player.aiSpeed;
+        
         // Normalize direction
-        const speed = gameConfig.player.aiSpeed;
-        let moveX = dx / distance * speed;
-        let moveY = dy / distance * speed;
+        const speedFactor = 0.85 + (Math.random() * 0.3); // Speed varies between 85% and 115%
+        const speed = gameConfig.player.aiSpeed * speedFactor;
+        
+        let moveX = (dx / distance * speed) + jitterX;
+        let moveY = (dy / distance * speed) + jitterY;
         
         // Determine facing direction from movement
         let direction = '';
@@ -583,6 +761,14 @@ export default class AIPlayer {
         // Update direction
         if (direction) {
             this.player.setDirection(direction);
+        }
+        
+        // Occasional deliberate direction changes for more human-like movement
+        // This makes the AI sometimes look in a different direction than it's moving
+        if (Math.random() < 0.05) {  // 5% chance each frame
+            const directions = ['up', 'down', 'left', 'right', 'up-left', 'up-right', 'down-left', 'down-right'];
+            const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+            this.player.setDirection(randomDirection);
         }
         
         // Apply movement

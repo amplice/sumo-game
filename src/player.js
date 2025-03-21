@@ -158,6 +158,9 @@ export default class Player {
             this.throwWindupTimer = 0;
             this.canMove = false; // Prevent movement during windup
             
+            // Immediately stop all movement
+            this.setVelocity(0, 0);
+            
             // Show windup visual
             this.throwWindupCircle.setVisible(true);
             this.throwWindupCircle.setAlpha(gameConfig.throw.visual.windupCircleAlpha);
@@ -190,6 +193,9 @@ export default class Player {
             this.isCounterWindingUp = true;
             this.counterWindupTimer = 0;
             this.canMove = false; // Prevent movement during counter windup
+            
+            // Immediately stop all movement
+            this.setVelocity(0, 0);
             
             const counterVisual = gameConfig.counter.visual;
             
@@ -244,6 +250,9 @@ export default class Player {
             this.isCounterActive = true;
             this.counterActiveTimer = 0;
             this.canMove = false; // Still can't move during active counter
+            
+            // Ensure velocity is still zero when counter activates
+            this.setVelocity(0, 0);
             
             // Hide windup visual and show active visual
             this.counterWindupCircle.setVisible(false);
@@ -346,8 +355,10 @@ export default class Player {
                 alpha: 0,
                 duration: visual.fadeOutDuration,
                 onComplete: () => {
-                    this.throwCone.destroy();
-                    this.throwCone = null;
+                    if (this.throwCone && this.throwCone.active) {
+                        this.throwCone.destroy();
+                        this.throwCone = null;
+                    }
                 }
             });
             
@@ -396,6 +407,10 @@ export default class Player {
         return angleDiff <= angle / 2;
     }
     
+    /**
+     * Update method called every frame
+     * @param {number} delta - Time since last frame
+     */
     update(delta) {
         // Update cooldowns
         if (this.pushCooldown > 0) {
@@ -405,6 +420,9 @@ export default class Player {
         // Update throw windup timer
         if (this.isThrowWindingUp) {
             this.throwWindupTimer += delta;
+            
+            // Ensure velocity remains at zero during windup
+            this.setVelocity(0, 0);
             
             // Pulsate the player during windup
             const pulsateProgress = (this.throwWindupTimer % 500) / 500;
@@ -419,6 +437,9 @@ export default class Player {
         // Update counter windup timer
         if (this.isCounterWindingUp) {
             this.counterWindupTimer += delta;
+            
+            // Ensure velocity remains at zero during counter windup
+            this.setVelocity(0, 0);
             
             const counterFeedback = gameConfig.counter.feedback;
             const progress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
@@ -447,6 +468,9 @@ export default class Player {
         // Update counter active timer
         if (this.isCounterActive) {
             this.counterActiveTimer += delta;
+            
+            // Ensure velocity remains at zero during active counter
+            this.setVelocity(0, 0);
             
             const counterFeedback = gameConfig.counter.feedback;
             
