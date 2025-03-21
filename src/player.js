@@ -191,6 +191,24 @@ export default class Player {
             this.counterWindupCircle.setVisible(true);
             this.counterWindupCircle.setAlpha(0.3);
             
+            // Create a pulsing effect around the player during counter windup
+            const pulseEffect = this.scene.add.circle(this.x, this.y, 20, 0xFFFFFF, 0.6);
+            this.scene.tweens.add({
+                targets: pulseEffect,
+                scale: 1.5,
+                alpha: 0,
+                duration: this.counterWindupDuration,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => {
+                    // Keep the pulse centered on the player as they move
+                    pulseEffect.x = this.x;
+                    pulseEffect.y = this.y;
+                },
+                onComplete: () => {
+                    pulseEffect.destroy();
+                }
+            });
+            
             return true;
         }
         return false;
@@ -395,6 +413,17 @@ export default class Player {
             // Update windup circle size proportional to progress
             const progress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
             this.counterWindupCircle.setScale(progress * 1.5);
+            
+            // Pulsate the indicator during counter windup
+            const pulsateScale = 1 + Math.sin(progress * Math.PI * 4) * 0.3;
+            this.indicator.setScale(pulsateScale);
+            
+            // Color shift from white to yellow as the counter charge progresses
+            const colorProgress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
+            const r = 255;
+            const g = 255;
+            const b = Math.floor(255 * (1 - colorProgress));
+            this.counterWindupCircle.fillColor = Phaser.Display.Color.GetColor(r, g, b);
             
             // If windup is complete, activate the counter
             if (this.counterWindupTimer >= this.counterWindupDuration) {
