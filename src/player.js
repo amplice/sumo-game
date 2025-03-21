@@ -32,11 +32,26 @@ export default class Player {
         this.throwWindupTimer = 0;
         this.throwWindupDuration = 1000; // 1 second wind-up
         
+        // Counter-related properties
+        this.isCounterWindingUp = false;
+        this.isCounterActive = false;
+        this.counterWindupTimer = 0;
+        this.counterActiveTimer = 0;
+        this.counterWindupDuration = 500; // 0.5 second wind-up
+        this.counterActiveDuration = 500; // 0.5 second active period
+        
         // Visual elements for throw
         this.throwWindupCircle = scene.add.circle(x, y, 15, color, 0.3);
         this.throwWindupCircle.setVisible(false);
         
         this.throwCone = null; // Will be created when needed
+        
+        // Visual elements for counter
+        this.counterWindupCircle = scene.add.circle(x, y, 15, 0xFFFFFF, 0.3);
+        this.counterWindupCircle.setVisible(false);
+        
+        this.counterActiveCircle = scene.add.circle(x, y, 20, 0xFFFF00, 0.4);
+        this.counterActiveCircle.setVisible(false);
         
         this.updateIndicator();
     }
@@ -60,6 +75,18 @@ export default class Player {
             const progress = this.throwWindupTimer / this.throwWindupDuration;
             const scale = 1 + Math.sin(progress * Math.PI) * 0.3;
             this.throwWindupCircle.setScale(scale);
+        }
+        
+        // Update counter windup visual if active
+        if (this.counterWindupCircle.visible) {
+            this.counterWindupCircle.x = this.sprite.x;
+            this.counterWindupCircle.y = this.sprite.y;
+        }
+        
+        // Update counter active visual if active
+        if (this.counterActiveCircle.visible) {
+            this.counterActiveCircle.x = this.sprite.x;
+            this.counterActiveCircle.y = this.sprite.y;
         }
     }
     
@@ -149,6 +176,60 @@ export default class Player {
                 this.throwCone.destroy();
                 this.throwCone = null;
             }
+        }
+    }
+    
+    // Start counter windup
+    startCounter() {
+        // Can only start counter if not already countering, not throwing, and can move
+        if (!this.isCounterWindingUp && !this.isCounterActive && !this.isThrowWindingUp && this.canMove) {
+            this.isCounterWindingUp = true;
+            this.counterWindupTimer = 0;
+            this.canMove = false; // Prevent movement during counter windup
+            
+            // Show counter windup visual
+            this.counterWindupCircle.setVisible(true);
+            this.counterWindupCircle.setAlpha(0.3);
+            
+            return true;
+        }
+        return false;
+    }
+    
+    // Cancel counter (used when pushed during windup)
+    cancelCounter() {
+        if (this.isCounterWindingUp) {
+            this.isCounterWindingUp = false;
+            this.counterWindupTimer = 0;
+            this.canMove = true;
+            this.counterWindupCircle.setVisible(false);
+        }
+    }
+    
+    // Activate counter (called after windup completes)
+    activateCounter() {
+        if (this.isCounterWindingUp) {
+            this.isCounterWindingUp = false;
+            this.isCounterActive = true;
+            this.counterActiveTimer = 0;
+            this.canMove = false; // Still can't move during active counter
+            
+            // Hide windup visual and show active visual
+            this.counterWindupCircle.setVisible(false);
+            this.counterActiveCircle.setVisible(true);
+            
+            return true;
+        }
+        return false;
+    }
+    
+    // End counter (called when active period ends)
+    endCounter() {
+        if (this.isCounterActive) {
+            this.isCounterActive = false;
+            this.counterActiveTimer = 0;
+            this.canMove = true;
+            this.counterActiveCircle.setVisible(false);
         }
     }
     
@@ -305,6 +386,35 @@ export default class Player {
             // Update windup circle size proportional to progress
             const progress = Math.min(this.throwWindupTimer / this.throwWindupDuration, 1);
             this.throwWindupCircle.setScale(progress * 1.5);
+        }
+        
+        // Update counter windup timer
+        if (this.isCounterWindingUp) {
+            this.counterWindupTimer += delta;
+            
+            // Update windup circle size proportional to progress
+            const progress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
+            this.counterWindupCircle.setScale(progress * 1.5);
+            
+            // If windup is complete, activate the counter
+            if (this.counterWindupTimer >= this.counterWindupDuration) {
+                this.activateCounter();
+            }
+        }
+        
+        // Update counter active timer
+        if (this.isCounterActive) {
+            this.counterActiveTimer += delta;
+            
+            // Pulsate the active counter circle
+            const pulsateProgress = (this.counterActiveTimer % 200) / 200;
+            const pulsateScale = 1 + Math.sin(pulsateProgress * Math.PI * 2) * 0.3;
+            this.counterActiveCircle.setScale(pulsateScale);
+            
+            // End counter when active period is over
+            if (this.counterActiveTimer >= this.counterActiveDuration) {
+                this.endCounter();
+            }
         }
     }
 }

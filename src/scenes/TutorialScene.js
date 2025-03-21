@@ -19,11 +19,13 @@ export default class TutorialScene extends Phaser.Scene {
             "- Movement: W,A,S,D",
             "- Push: SPACE",
             "- Throw: SHIFT (has 1-second windup)",
+            "- Counter: C (has 0.5-second windup, lasts 0.5 seconds)",
             "",
             "Player 2:",
             "- Movement: Arrow Keys",
             "- Push: Numpad 0",
             "- Throw: Numpad 1 (has 1-second windup)",
+            "- Counter: Numpad 2 (has 0.5-second windup, lasts 0.5 seconds)",
             "",
             "RULES:",
             "- Push your opponent out of the ring",
@@ -34,9 +36,11 @@ export default class TutorialScene extends Phaser.Scene {
             "where your actions will be aimed.",
             "",
             "TIPS:",
-            "- You can't move during a throw windup",
+            "- You can't move during a throw windup or counter",
             "- If pushed during a throw windup, the throw is cancelled",
-            "- Once started, a throw cannot be cancelled voluntarily",
+            "- If you counter when an opponent throws, you win instead",
+            "- If pushed while countering, you get pushed back extra far",
+            "- Timing is crucial - counter has a brief active window",
             "- Push has a shorter range but faster execution"
         ];
 
