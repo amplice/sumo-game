@@ -14,11 +14,11 @@ const gameConfig = {
 
     // Player Configuration
     player: {
-        moveSpeed: 200,                // Base movement speed in pixels per second
+        moveSpeed: 170,                // Base movement speed in pixels per second
         diagonalSpeedModifier: 0.707,  // Speed modifier when moving diagonally (√2/2)
-        size: 10,                      // Player radius in pixels
-        hitboxSize: 15,                // Physics hitbox radius (slightly larger than visual)
-        aiSpeed: 200,                  // AI player speed (slightly slower than player)
+        size: 18,                      // Player radius in pixels
+        hitboxSize: 23,                // Physics hitbox radius (slightly larger than visual)
+        aiSpeed: 170,                  // AI player speed (slightly slower than player)
         outOfBoundsMargin: 15,         // Distance from ring edge to count as out-of-bounds
         indicator: {
             size: 5,                  // Distance from center to indicator
