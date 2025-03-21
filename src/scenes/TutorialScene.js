@@ -6,59 +6,74 @@ export default class TutorialScene extends Phaser.Scene {
     }
 
     create() {
-        // Add title
-        this.add.text(400, 50, 'HOW TO PLAY', gameConfig.ui.fonts.header)
-            .setOrigin(0.5);
+        // Add dark background
+        this.add.rectangle(0, 0, 800, 600, 0x222222)
+            .setOrigin(0, 0);
 
-        // Instructions text
+        // Add title with better styling
+        this.add.text(400, 30, 'HOW TO PLAY', {
+            fontSize: '32px',
+            fontStyle: 'bold',
+            fill: '#FFFFFF',
+            stroke: '#000000',
+            strokeThickness: 4,
+            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, stroke: true, fill: true }
+        }).setOrigin(0.5);
+
+        // Instructions text - updated for latest game version and compressed
         const instructions = [
             "CONTROLS:",
             "",
-            "Player 1:",
-            "- Movement: W,A,S,D",
-            "- Push: SPACE",
-            `- Throw: SHIFT (has ${gameConfig.throw.windupDuration/1000}-second windup)`,
-            `- Counter: C (has ${gameConfig.counter.windupDuration/1000}-second windup, lasts ${gameConfig.counter.activeDuration/1000} seconds)`,
-            "",
-            "Player 2:",
-            "- Movement: Arrow Keys",
-            "- Push: Numpad 0",
-            `- Throw: Numpad 1 (has ${gameConfig.throw.windupDuration/1000}-second windup)`,
-            `- Counter: Numpad 2 (has ${gameConfig.counter.windupDuration/1000}-second windup, lasts ${gameConfig.counter.activeDuration/1000} seconds)`,
+            "Player 1:  Movement: W,A,S,D  |  Push: SPACE  |  Throw: SHIFT  |  Counter: C",
+            "Player 2:  Movement: Arrow Keys  |  Push: Numpad 0  |  Throw: Numpad 1  |  Counter: Numpad 2",
             "",
             "RULES:",
             "- Push your opponent out of the ring",
             "- Use Throw for an instant win (requires 1-second windup)",
             "- Best of 3 rounds wins the match",
+            "- Your facing direction (shown by the pointer) determines where actions are aimed",
             "",
-            "Your facing direction (shown by the pointer) determines",
-            "where your actions will be aimed.",
+            "COUNTER MECHANICS:",
+            "- During Counter windup (0.5s): You're vulnerable and get pushed extra far",
+            "- During Counter active (0.5s): Counters both Throws AND Pushes",
+            "- If you counter a throw: You throw your opponent instead (instant win)",
+            "- If you counter a push: Your opponent gets pushed back instead",
             "",
             "TIPS:",
             "- You can't move during a throw windup or counter",
             "- If pushed during a throw windup, the throw is cancelled",
-            "- If you counter when an opponent throws, you win instead",
-            "- If pushed while countering, you get pushed back extra far",
+            "- If pushed during counter windup, you get pushed extra far",
             "- Timing is crucial - counter has a brief active window",
             "- Push has a shorter range but faster execution"
         ];
 
-        // Add instructions text
-        const instructionsText = this.add.text(400, 220, instructions, gameConfig.ui.fonts.small)
-            .setOrigin(0.5, 0);
+        // Create a container with a mask for scrollable content
+        const contentY = 80;
+        const contentHeight = 400;  // Height of visible content area
+        
+        // Add instructions text in a more compact format
+        const instructionsText = this.add.text(50, contentY, instructions, {
+            fontSize: '12px',
+            fill: '#FFFFFF',
+            lineSpacing: 6
+        });
 
-        // Back button
-        this.createButton(400, 520, 'Back to Menu', () => {
+        // Create back button well below the content
+        this.createButton(600, 530, 'Back to Menu', 150, 30, () => {
             this.scene.start('MenuScene');
         });
     }
 
-    createButton(x, y, text, callback) {
+    createButton(x, y, text, width, height, callback) {
         const buttonConfig = gameConfig.ui.buttons;
-        const button = this.add.rectangle(x, y, buttonConfig.width, buttonConfig.height, buttonConfig.color);
+        const button = this.add.rectangle(x, y, width, height, buttonConfig.color)
+            .setStrokeStyle(2, 0xFFFFFF);
         
-        const buttonText = this.add.text(x, y, text, gameConfig.ui.fonts.normal)
-            .setOrigin(0.5);
+        const buttonText = this.add.text(x, y, text, {
+            fontSize: '12px',
+            fill: '#FFFFFF',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
         
         button.setInteractive({ useHandCursor: true })
             .on('pointerover', () => button.fillColor = buttonConfig.hoverColor)
