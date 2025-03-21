@@ -3,6 +3,7 @@ import gameConfig from '../config/gameConfig';
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
+        this.selectedDifficulty = 'medium';
     }
 
     create() {
@@ -20,11 +21,18 @@ export default class MenuScene extends Phaser.Scene {
             this.scene.start('GameScene', { mode: 'twoPlayer' });
         });
 
-        this.createButton(400, 320, 'Single Player', () => {
-            this.scene.start('GameScene', { mode: 'singlePlayer' });
+        // Single Player button (with difficulty display)
+        this.singlePlayerButton = this.createButton(400, 320, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, () => {
+            this.scene.start('GameScene', { 
+                mode: 'singlePlayer',
+                difficulty: this.selectedDifficulty
+            });
         });
 
-        this.createButton(400, 390, 'How to Play', () => {
+        // Difficulty selection buttons
+        this.createDifficultyButtons();
+
+        this.createButton(400, 440, 'How to Play', () => {
             this.scene.start('TutorialScene');
         });
     }
@@ -44,5 +52,58 @@ export default class MenuScene extends Phaser.Scene {
                 button.fillColor = buttonConfig.hoverColor;
                 callback();
             });
+            
+        return { button, text: buttonText };
+    }
+    
+    createDifficultyButtons() {
+        const y = 370;
+        const spacing = 120;
+        const difficulties = ['easy', 'medium', 'hard'];
+        this.difficultyButtons = {};
+        
+        difficulties.forEach((difficulty, index) => {
+            const x = 400 + (index - 1) * spacing;
+            const color = (difficulty === this.selectedDifficulty) ? 
+                          0x00AA00 : // Green for selected
+                          0x555555;  // Gray for unselected
+                          
+            const button = this.add.rectangle(x, y, 100, 40, color)
+                .setInteractive({ useHandCursor: true })
+                .on('pointerup', () => {
+                    this.setDifficulty(difficulty);
+                });
+                
+            const text = this.add.text(x, y, this.formatDifficulty(difficulty), {
+                fontSize: '18px',
+                fill: '#FFF'
+            }).setOrigin(0.5);
+            
+            this.difficultyButtons[difficulty] = { button, text };
+        });
+    }
+    
+    setDifficulty(difficulty) {
+        // Update the previous selected button
+        if (this.selectedDifficulty && this.difficultyButtons[this.selectedDifficulty]) {
+            this.difficultyButtons[this.selectedDifficulty].button.fillColor = 0x555555;
+        }
+        
+        // Set new difficulty
+        this.selectedDifficulty = difficulty;
+        
+        // Update the new selected button
+        if (this.difficultyButtons[difficulty]) {
+            this.difficultyButtons[difficulty].button.fillColor = 0x00AA00;
+        }
+        
+        // Update the Single Player button text
+        if (this.singlePlayerButton && this.singlePlayerButton.text) {
+            this.singlePlayerButton.text.setText(`Single Player (${this.formatDifficulty(difficulty)})`);
+        }
+    }
+    
+    formatDifficulty(difficulty) {
+        return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     }
 }

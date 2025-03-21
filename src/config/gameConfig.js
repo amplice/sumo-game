@@ -18,14 +18,14 @@ const gameConfig = {
         diagonalSpeedModifier: 0.707,  // Speed modifier when moving diagonally (√2/2)
         size: 10,                      // Player radius in pixels
         hitboxSize: 15,                // Physics hitbox radius (slightly larger than visual)
-        aiSpeed: 180,                  // AI player speed (slightly slower than player)
+        aiSpeed: 200,                  // AI player speed (slightly slower than player)
         outOfBoundsMargin: 15,         // Distance from ring edge to count as out-of-bounds
         indicator: {
-            size: 10,                  // Distance from center to indicator
+            size: 5,                  // Distance from center to indicator
             triangleShape: [           // Triangle indicator shape [x1,y1, x2,y2, x3,y3]
                 -4, -3,                // Point 1 (left)
                 4, -3,                 // Point 2 (right)
-                0, 6                   // Point 3 (bottom)
+                0, -10                   // Point 3 (bottom)
             ],
             color: 0x000000,           // Indicator color (black)
         },
@@ -38,7 +38,7 @@ const gameConfig = {
     // Push Action
     push: {
         cooldown: 500,                 // Push cooldown in ms
-        range: 70,                     // Push detection range in pixels
+        range: 60,                     // Push detection range in pixels
         width: 40,                     // Push area width in pixels
         distance: 100,                 // How far target is pushed in pixels
         counterPushDistance: 200,      // Extra push distance when target is countering
@@ -142,23 +142,64 @@ const gameConfig = {
         }
     },
     
-    // AI behavior
-    ai: {
-        updateInterval: {
-            min: 500,  // Minimum time between AI decisions in ms
-            max: 1000  // Maximum time between AI decisions in ms
+// AI behavior
+ai: {
+    updateInterval: {
+        min: 500,  // Minimum time between AI decisions in ms
+        max: 1000  // Maximum time between AI decisions in ms
+    },
+    strategy: {
+        edgeDistance: 50,          // Distance to consider opponent "near edge"
+        closeDistance: 100,        // Distance to consider "close" to player
+        pushChanceNearEdge: 0.7,   // Chance to push when opponent near edge
+        pushChanceNormal: 0.4,     // Normal push chance 
+        throwChanceNearEdge: 0.2,  // Chance to throw when opponent near edge
+        throwChanceNormal: 0.3,    // Normal throw chance
+        counterChance: 0.2,        // Chance to use counter randomly
+        counterChanceVsThrow: 0.7, // Chance to counter when opponent is throwing
+    },
+    difficulties: {
+        easy: {
+            reactionTime: 500,     // Ms delay before reacting
+            decisionQuality: 0.5,  // 0-1 chance of making optimal decision
+            prediction: 0.2,       // 0-1 ability to predict player movements
+            positionAccuracy: 0.3, // 0-1 positioning precision
+            edgeAwareness: 0.4     // 0-1 awareness of ring boundaries
         },
-        strategy: {
-            edgeDistance: 50,          // Distance to consider opponent "near edge"
-            closeDistance: 100,        // Distance to consider "close" to player
-            pushChanceNearEdge: 0.7,   // Chance to push when opponent near edge
-            pushChanceNormal: 0.4,     // Normal push chance 
-            throwChanceNearEdge: 0.2,  // Chance to throw when opponent near edge
-            throwChanceNormal: 0.3,    // Normal throw chance
-            counterChance: 0.2,        // Chance to use counter randomly
-            counterChanceVsThrow: 0.7, // Chance to counter when opponent is throwing
+        medium: {
+            reactionTime: 300,
+            decisionQuality: 0.7,
+            prediction: 0.5,
+            positionAccuracy: 0.6,
+            edgeAwareness: 0.7
+        },
+        hard: {
+            reactionTime: 150,
+            decisionQuality: 0.9,
+            prediction: 0.8,
+            positionAccuracy: 0.9,
+            edgeAwareness: 0.95
         }
-    }
+    },
+    states: {
+        neutral: {
+            idealDistance: 120,    // Ideal distance to maintain in neutral state
+            actionFrequency: 0.4   // 0-1 frequency of taking actions
+        },
+        defensive: {
+            centerBias: 0.7,       // 0-1 bias towards ring center
+            pushFrequency: 0.6     // 0-1 frequency of pushing when close
+        },
+        aggressive: {
+            predictiveFactor: 0.6, // 0-1 factor for predicting opponent position
+            throwFrequency: 0.7    // 0-1 frequency of throwing when aligned
+        },
+        counterReady: {
+            counterPriority: 0.9   // 0-1 priority of counter over other actions
+        }
+    },
+    decisionFrequency: 100         // Ms between micro-decisions
+}
 };
 
 export default gameConfig;
