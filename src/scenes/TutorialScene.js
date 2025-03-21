@@ -1,3 +1,5 @@
+import gameConfig from '../config/gameConfig';
+
 export default class TutorialScene extends Phaser.Scene {
     constructor() {
         super({ key: 'TutorialScene' });
@@ -5,11 +7,8 @@ export default class TutorialScene extends Phaser.Scene {
 
     create() {
         // Add title
-        this.add.text(400, 50, 'HOW TO PLAY', {
-            fontSize: '36px',
-            fill: '#FFF',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.add.text(400, 50, 'HOW TO PLAY', gameConfig.ui.fonts.header)
+            .setOrigin(0.5);
 
         // Instructions text
         const instructions = [
@@ -18,14 +17,14 @@ export default class TutorialScene extends Phaser.Scene {
             "Player 1:",
             "- Movement: W,A,S,D",
             "- Push: SPACE",
-            "- Throw: SHIFT (has 1-second windup)",
-            "- Counter: C (has 0.5-second windup, lasts 0.5 seconds)",
+            `- Throw: SHIFT (has ${gameConfig.throw.windupDuration/1000}-second windup)`,
+            `- Counter: C (has ${gameConfig.counter.windupDuration/1000}-second windup, lasts ${gameConfig.counter.activeDuration/1000} seconds)`,
             "",
             "Player 2:",
             "- Movement: Arrow Keys",
             "- Push: Numpad 0",
-            "- Throw: Numpad 1 (has 1-second windup)",
-            "- Counter: Numpad 2 (has 0.5-second windup, lasts 0.5 seconds)",
+            `- Throw: Numpad 1 (has ${gameConfig.throw.windupDuration/1000}-second windup)`,
+            `- Counter: Numpad 2 (has ${gameConfig.counter.windupDuration/1000}-second windup, lasts ${gameConfig.counter.activeDuration/1000} seconds)`,
             "",
             "RULES:",
             "- Push your opponent out of the ring",
@@ -45,11 +44,8 @@ export default class TutorialScene extends Phaser.Scene {
         ];
 
         // Add instructions text
-        const instructionsText = this.add.text(400, 220, instructions, {
-            fontSize: '18px',
-            fill: '#FFF',
-            align: 'center'
-        }).setOrigin(0.5, 0);
+        const instructionsText = this.add.text(400, 220, instructions, gameConfig.ui.fonts.small)
+            .setOrigin(0.5, 0);
 
         // Back button
         this.createButton(400, 520, 'Back to Menu', () => {
@@ -58,19 +54,18 @@ export default class TutorialScene extends Phaser.Scene {
     }
 
     createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 200, 50, 0x0000AA);
+        const buttonConfig = gameConfig.ui.buttons;
+        const button = this.add.rectangle(x, y, buttonConfig.width, buttonConfig.height, buttonConfig.color);
         
-        const buttonText = this.add.text(x, y, text, {
-            fontSize: '24px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
+        const buttonText = this.add.text(x, y, text, gameConfig.ui.fonts.normal)
+            .setOrigin(0.5);
         
         button.setInteractive({ useHandCursor: true })
-            .on('pointerover', () => button.fillColor = 0x0000FF)
-            .on('pointerout', () => button.fillColor = 0x0000AA)
-            .on('pointerdown', () => button.fillColor = 0x000077)
+            .on('pointerover', () => button.fillColor = buttonConfig.hoverColor)
+            .on('pointerout', () => button.fillColor = buttonConfig.color)
+            .on('pointerdown', () => button.fillColor = buttonConfig.pressColor)
             .on('pointerup', () => {
-                button.fillColor = 0x0000FF;
+                button.fillColor = buttonConfig.hoverColor;
                 callback();
             });
     }

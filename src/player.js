@@ -1,3 +1,5 @@
+import gameConfig from './config/gameConfig';
+
 export default class Player {
     constructor(scene, x, y, sprite, color) {
         this.scene = scene;
@@ -6,21 +8,20 @@ export default class Player {
         this.sprite = scene.physics.add.sprite(x, y, sprite);
         this.sprite.setVisible(false);
         this.sprite.setScale(0.3);
-        this.sprite.body.setCircle(15); // Circle hitbox
+        this.sprite.body.setCircle(gameConfig.player.hitboxSize);
         
         this.direction = 'down';
         this.directionAngle = 0;
         
         // Main circle visual
-        this.circle = scene.add.circle(x, y, 10, color);
+        this.circle = scene.add.circle(x, y, gameConfig.player.size, color);
         
         // Small direction indicator triangle
+        const indicatorShape = gameConfig.player.indicator;
         this.indicator = scene.add.triangle(
-            x, y + 10, // Position slightly offset from circle center
-            -4, -3,
-            4, -3,
-            0, 6,
-            0x000000 // Black triangle
+            x, y + indicatorShape.size, // Position slightly offset from circle center
+            ...indicatorShape.triangleShape,
+            indicatorShape.color 
         );
         
         // Action states
@@ -30,27 +31,29 @@ export default class Player {
         // Throw-related properties
         this.isThrowWindingUp = false;
         this.throwWindupTimer = 0;
-        this.throwWindupDuration = 1000; // 1 second wind-up
+        this.throwWindupDuration = gameConfig.throw.windupDuration;
         
         // Counter-related properties
         this.isCounterWindingUp = false;
         this.isCounterActive = false;
         this.counterWindupTimer = 0;
         this.counterActiveTimer = 0;
-        this.counterWindupDuration = 500; // 0.5 second wind-up
-        this.counterActiveDuration = 500; // 0.5 second active period
+        this.counterWindupDuration = gameConfig.counter.windupDuration;
+        this.counterActiveDuration = gameConfig.counter.activeDuration;
         
         // Visual elements for throw
-        this.throwWindupCircle = scene.add.circle(x, y, 15, color, 0.3);
+        const throwVisual = gameConfig.throw.visual;
+        this.throwWindupCircle = scene.add.circle(x, y, throwVisual.windupCircleSize, color, throwVisual.windupCircleAlpha);
         this.throwWindupCircle.setVisible(false);
         
         this.throwCone = null; // Will be created when needed
         
         // Visual elements for counter
-        this.counterWindupCircle = scene.add.circle(x, y, 15, 0xFFFFFF, 0.3);
+        const counterVisual = gameConfig.counter.visual;
+        this.counterWindupCircle = scene.add.circle(x, y, counterVisual.windupCircleSize, counterVisual.windupCircleColor, counterVisual.windupCircleAlpha);
         this.counterWindupCircle.setVisible(false);
         
-        this.counterActiveCircle = scene.add.circle(x, y, 20, 0xFFFF00, 0.4);
+        this.counterActiveCircle = scene.add.circle(x, y, counterVisual.activeCircleSize, counterVisual.activeCircleColor, counterVisual.activeCircleAlpha);
         this.counterActiveCircle.setVisible(false);
         
         this.updateIndicator();
@@ -112,8 +115,9 @@ export default class Player {
     
     updateIndicator() {
         // Calculate position on the edge of the circle
+        const indicatorShape = gameConfig.player.indicator;
         const radians = Phaser.Math.DegToRad(this.directionAngle);
-        const distance = 10; // Distance from center to indicator
+        const distance = indicatorShape.size;
         
         this.indicator.x = this.sprite.x + Math.sin(radians) * distance;
         this.indicator.y = this.sprite.y + Math.cos(radians) * distance;
@@ -141,7 +145,7 @@ export default class Player {
     // Action methods
     startPush() {
         if (this.pushCooldown <= 0 && !this.isThrowWindingUp) {
-            this.pushCooldown = 500; // 0.5 second cooldown
+            this.pushCooldown = gameConfig.push.cooldown;
             return true;
         }
         return false;
@@ -156,7 +160,7 @@ export default class Player {
             
             // Show windup visual
             this.throwWindupCircle.setVisible(true);
-            this.throwWindupCircle.setAlpha(0.3);
+            this.throwWindupCircle.setAlpha(gameConfig.throw.visual.windupCircleAlpha);
             
             return true;
         }
@@ -187,15 +191,24 @@ export default class Player {
             this.counterWindupTimer = 0;
             this.canMove = false; // Prevent movement during counter windup
             
+            const counterVisual = gameConfig.counter.visual;
+            
             // Show counter windup visual
             this.counterWindupCircle.setVisible(true);
-            this.counterWindupCircle.setAlpha(0.3);
+            this.counterWindupCircle.setAlpha(counterVisual.windupCircleAlpha);
             
             // Create a pulsing effect around the player during counter windup
-            const pulseEffect = this.scene.add.circle(this.x, this.y, 20, 0xFFFFFF, 0.6);
+            const pulseEffect = this.scene.add.circle(
+                this.x, 
+                this.y, 
+                counterVisual.pulseSize, 
+                counterVisual.pulseColor, 
+                counterVisual.pulseAlpha
+            );
+            
             this.scene.tweens.add({
                 targets: pulseEffect,
-                scale: 1.5,
+                scale: counterVisual.pulseScale,
                 alpha: 0,
                 duration: this.counterWindupDuration,
                 ease: 'Sine.easeInOut',
@@ -278,34 +291,31 @@ export default class Player {
                 this.throwCone.destroy();
             }
             
+            const throwConfig = gameConfig.throw;
+            const visual = throwConfig.visual;
+            
             // Create a new cone graphic
             this.throwCone = this.scene.add.graphics();
-            this.throwCone.fillStyle(0xFF8800, 0.5);
+            this.throwCone.fillStyle(visual.color, visual.alpha);
             
-            // Draw cone shape with exact 45-degree angle
+            // Draw cone shape with exact angle from config
             const startX = this.x;
             const startY = this.y;
-            const coneLength = 100;
+            const coneLength = throwConfig.coneSize.length;
             
             // Calculate unit vector perpendicular to direction
             const perpX = -dirVector.y;
             const perpY = dirVector.x;
             
-            // Cone width at maximum distance (use tangent of 22.5 degrees = 0.4142)
-            const halfConeWidth = coneLength * 0.4142;
-            
-            // Calculate the left and right edges of the cone
-            const leftEdgeX = startX + dirVector.x * coneLength + perpX * halfConeWidth;
-            const leftEdgeY = startY + dirVector.y * coneLength + perpY * halfConeWidth;
-            const rightEdgeX = startX + dirVector.x * coneLength - perpX * halfConeWidth;
-            const rightEdgeY = startY + dirVector.y * coneLength - perpY * halfConeWidth;
+            // Cone width at maximum distance
+            const halfConeWidth = coneLength * throwConfig.coneSize.halfAngleTangent;
             
             // Draw the cone
             this.throwCone.beginPath();
             this.throwCone.moveTo(startX, startY);
             
             // Create smooth arc for the cone edge
-            const steps = 10;
+            const steps = throwConfig.coneSize.steps;
             
             // Left half of the cone
             for (let i = 0; i <= steps; i++) {
@@ -327,14 +337,14 @@ export default class Player {
             this.throwCone.fillPath();
             
             // Add outline to make the range more visible
-            this.throwCone.lineStyle(2, 0xFF5500, 0.8);
+            this.throwCone.lineStyle(visual.borderWidth, visual.borderColor, visual.alpha);
             this.throwCone.strokePath();
             
             // Animate the cone fading out
             this.scene.tweens.add({
                 targets: this.throwCone,
                 alpha: 0,
-                duration: 600,
+                duration: visual.fadeOutDuration,
                 onComplete: () => {
                     this.throwCone.destroy();
                     this.throwCone = null;
@@ -410,12 +420,15 @@ export default class Player {
         if (this.isCounterWindingUp) {
             this.counterWindupTimer += delta;
             
-            // Update windup circle size proportional to progress
+            const counterFeedback = gameConfig.counter.feedback;
             const progress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
+            
+            // Update windup circle size proportional to progress
             this.counterWindupCircle.setScale(progress * 1.5);
             
             // Pulsate the indicator during counter windup
-            const pulsateScale = 1 + Math.sin(progress * Math.PI * 4) * 0.3;
+            const pulsateScale = 1 + Math.sin(progress * Math.PI * counterFeedback.trianglePulsateSpeed) * 
+                                    counterFeedback.trianglePulsateAmount;
             this.indicator.setScale(pulsateScale);
             
             // Color shift from white to yellow as the counter charge progresses
@@ -435,9 +448,13 @@ export default class Player {
         if (this.isCounterActive) {
             this.counterActiveTimer += delta;
             
+            const counterFeedback = gameConfig.counter.feedback;
+            
             // Pulsate the active counter circle
-            const pulsateProgress = (this.counterActiveTimer % 200) / 200;
-            const pulsateScale = 1 + Math.sin(pulsateProgress * Math.PI * 2) * 0.3;
+            const pulsateProgress = (this.counterActiveTimer % counterFeedback.pulsateCycleTime) / 
+                                   counterFeedback.pulsateCycleTime;
+            const pulsateScale = 1 + Math.sin(pulsateProgress * Math.PI * 2) * 
+                                counterFeedback.activePulsateSpeed;
             this.counterActiveCircle.setScale(pulsateScale);
             
             // End counter when active period is over

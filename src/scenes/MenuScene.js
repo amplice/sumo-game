@@ -1,3 +1,5 @@
+import gameConfig from '../config/gameConfig';
+
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -5,16 +7,13 @@ export default class MenuScene extends Phaser.Scene {
 
     create() {
         // Add title
-        this.add.text(400, 100, 'SUMO DUEL', {
-            fontSize: '64px',
-            fill: '#FFF',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        this.add.text(400, 100, 'SUMO DUEL', gameConfig.ui.fonts.title)
+            .setOrigin(0.5);
 
         // Create the ring background
-        const ringRadius = 200;
-        const ring = this.add.circle(400, 300, ringRadius, 0xCCCCCC);
-        ring.setStrokeStyle(4, 0x000000);
+        const ringRadius = gameConfig.ring.radius - 50; // Slightly smaller for menu
+        const ring = this.add.circle(400, 300, ringRadius, gameConfig.ring.color);
+        ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
 
         // Create buttons
         this.createButton(400, 250, 'Two Player', () => {
@@ -31,19 +30,18 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     createButton(x, y, text, callback) {
-        const button = this.add.rectangle(x, y, 200, 50, 0x0000AA);
+        const buttonConfig = gameConfig.ui.buttons;
+        const button = this.add.rectangle(x, y, buttonConfig.width, buttonConfig.height, buttonConfig.color);
         
-        const buttonText = this.add.text(x, y, text, {
-            fontSize: '24px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
+        const buttonText = this.add.text(x, y, text, gameConfig.ui.fonts.normal)
+            .setOrigin(0.5);
         
         button.setInteractive({ useHandCursor: true })
-            .on('pointerover', () => button.fillColor = 0x0000FF)
-            .on('pointerout', () => button.fillColor = 0x0000AA)
-            .on('pointerdown', () => button.fillColor = 0x000077)
+            .on('pointerover', () => button.fillColor = buttonConfig.hoverColor)
+            .on('pointerout', () => button.fillColor = buttonConfig.color)
+            .on('pointerdown', () => button.fillColor = buttonConfig.pressColor)
             .on('pointerup', () => {
-                button.fillColor = 0x0000FF;
+                button.fillColor = buttonConfig.hoverColor;
                 callback();
             });
     }
