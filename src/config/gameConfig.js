@@ -21,7 +21,7 @@ const gameConfig = {
         aiSpeed: 170,                  // AI player speed (slightly slower than player)
         outOfBoundsMargin: 15,         // Distance from ring edge to count as out-of-bounds
         indicator: {
-            size: 5,                  // Distance from center to indicator
+            size: 0,                  // Distance from center to indicator
             triangleShape: [           // Triangle indicator shape [x1,y1, x2,y2, x3,y3]
                 -4, -3,                // Point 1 (left)
                 4, -3,                 // Point 2 (right)

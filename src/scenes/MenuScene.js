@@ -6,6 +6,11 @@ export default class MenuScene extends Phaser.Scene {
         this.selectedDifficulty = 'medium';
     }
 
+    preload() {
+        // Load the sprite sheet and atlas
+        this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+    }
+
     create() {
         // Create a darker background for better contrast
         this.add.rectangle(0, 0, 800, 600, 0x222222)
@@ -15,6 +20,39 @@ export default class MenuScene extends Phaser.Scene {
         const ringRadius = gameConfig.ring.radius - 20;
         const ring = this.add.circle(400, 340, ringRadius, gameConfig.ring.color);
         ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
+
+        // Add sumo sprites to the menu for visual preview
+        const blueSumo = this.add.sprite(300, 340, 'sumo_sprites', 'down_idle').setScale(2);
+        const redSumo = this.add.sprite(500, 340, 'sumo_sprites', 'down_idle').setScale(2);
+        
+        // Create simple idle animations
+        if (!this.anims.exists('menu_blue_idle')) {
+            this.anims.create({
+                key: 'menu_blue_idle',
+                frames: [
+                    { key: 'sumo_sprites', frame: 'down_idle' },
+                    { key: 'sumo_sprites', frame: 'down_walk_0' }
+                ],
+                frameRate: 2,
+                repeat: -1
+            });
+        }
+        
+        if (!this.anims.exists('menu_red_idle')) {
+            this.anims.create({
+                key: 'menu_red_idle',
+                frames: [
+                    { key: 'sumo_sprites', frame: 'down_idle' },
+                    { key: 'sumo_sprites', frame: 'down_walk_0' }
+                ],
+                frameRate: 2,
+                repeat: -1
+            });
+        }
+        
+        // Play the idle animations
+        blueSumo.play('menu_blue_idle');
+        redSumo.play('menu_red_idle');
 
         // Add title - positioned above the ring
         this.add.text(400, 80, 'SUMO DUEL', {

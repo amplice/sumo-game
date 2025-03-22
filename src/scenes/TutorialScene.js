@@ -5,6 +5,13 @@ export default class TutorialScene extends Phaser.Scene {
         super({ key: 'TutorialScene' });
     }
 
+    preload() {
+        // Load the sprite sheet and atlas if not already loaded
+        if (!this.textures.exists('sumo_sprites')) {
+            this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+        }
+    }
+
     create() {
         // Add dark background
         this.add.rectangle(0, 0, 800, 600, 0x222222)
@@ -19,6 +26,41 @@ export default class TutorialScene extends Phaser.Scene {
             strokeThickness: 4,
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, stroke: true, fill: true }
         }).setOrigin(0.5);
+
+        // Add sumo sprites for visual examples
+        const blueSumo = this.add.sprite(200, 200, 'sumo_sprites', 'right_idle').setScale(2);
+        const redSumo = this.add.sprite(600, 200, 'sumo_sprites', 'left_idle').setScale(2);
+        
+        // Create simple animations for demo
+        if (!this.anims.exists('tutorial_blue_walk')) {
+            this.anims.create({
+                key: 'tutorial_blue_walk',
+                frames: this.anims.generateFrameNames('sumo_sprites', { 
+                    prefix: 'right_walk_',
+                    start: 0, 
+                    end: 3
+                }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        
+        if (!this.anims.exists('tutorial_red_walk')) {
+            this.anims.create({
+                key: 'tutorial_red_walk',
+                frames: this.anims.generateFrameNames('sumo_sprites', { 
+                    prefix: 'left_walk_',
+                    start: 0, 
+                    end: 3
+                }),
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+        
+        // Play walking animations
+        blueSumo.play('tutorial_blue_walk');
+        redSumo.play('tutorial_red_walk');
 
         // Instructions text - updated for latest game version and compressed
         const instructions = [

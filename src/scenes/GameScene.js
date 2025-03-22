@@ -15,6 +15,11 @@ export default class GameScene extends Phaser.Scene {
         this.aiDifficulty = data.difficulty || 'medium';
     }
 
+    preload() {
+        // Load the sprite sheet and atlas
+        this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+    }
+
     create() {
         // Create the ring (circular boundary)
         this.ringRadius = gameConfig.ring.radius;
@@ -30,9 +35,12 @@ export default class GameScene extends Phaser.Scene {
             gameConfig.ring.borderColor
         );
         
+        // Create animations for all directions
+        this.createAnimations();
+        
         // Add players to the scene
-        this.player1 = new Player(this, 300, 400, 'player1', gameConfig.player.colors.player1);
-        this.player2 = new Player(this, 500, 200, 'player2', gameConfig.player.colors.player2);
+        this.player1 = new Player(this, 300, 400, 'sumo_sprites', gameConfig.player.colors.player1);
+        this.player2 = new Player(this, 500, 200, 'sumo_sprites', gameConfig.player.colors.player2);
         
         // Set up collision between players
         this.physics.add.collider(this.player1.sprite, this.player2.sprite);
@@ -95,6 +103,51 @@ export default class GameScene extends Phaser.Scene {
                 gameConfig.ui.fonts.small
             );
         }
+    }
+    
+    createAnimations() {
+        const directions = ['down', 'up', 'left', 'right'];
+        
+        // Create walking animations for main directions
+        directions.forEach(dir => {
+            this.anims.create({
+                key: `${dir}_walk`,
+                frames: this.anims.generateFrameNames('sumo_sprites', { 
+                    prefix: `${dir}_walk_`,
+                    start: 0, 
+                    end: 3
+                }),
+                frameRate: 8,
+                repeat: -1
+            });
+        });
+        
+        // Create diagonal idle animations
+        const diagonals = ['up-left', 'up-right', 'down-left', 'down-right'];
+        diagonals.forEach(dir => {
+            this.anims.create({
+                key: `${dir}_idle`,
+                frames: [{
+                    key: 'sumo_sprites',
+                    frame: `${dir}_idle`
+                }],
+                frameRate: 1,
+                repeat: 0
+            });
+        });
+        
+        // Create idle animations for the main directions
+        directions.forEach(dir => {
+            this.anims.create({
+                key: `${dir}_idle`,
+                frames: [{
+                    key: 'sumo_sprites',
+                    frame: `${dir}_idle`
+                }],
+                frameRate: 1,
+                repeat: 0
+            });
+        });
     }
 
     update(time, delta) {
@@ -212,62 +265,65 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Function to handle player movement
-    handlePlayerMovement(player, up, down, left, right) {
-        const speed = gameConfig.player.moveSpeed;
-        let movingX = false;
-        let movingY = false;
-        let direction = player.direction;
+    // Function to handle player movement
+handlePlayerMovement(player, up, down, left, right) {
+    const speed = gameConfig.player.moveSpeed;
+    let movingX = false;
+    let movingY = false;
+    let direction = player.direction;
+    
+    // Track velocity components instead of setting immediately
+    let velocityX = 0;
+    let velocityY = 0;
+    
+    // Handle Y-axis movement
+    if (up) {
+        velocityY = -speed;
+        direction = 'up';
+        movingY = true;
+    } else if (down) {
+        velocityY = speed;
+        direction = 'down';
+        movingY = true;
+    }
+    
+    // Handle X-axis movement
+    if (left) {
+        velocityX = -speed;
+        direction = 'left';
+        movingX = true;
+    } else if (right) {
+        velocityX = speed;
+        direction = 'right';
+        movingX = true;
+    }
+    
+    // Handle diagonal movement
+    if (movingX && movingY) {
+        // Calculate normalized diagonal velocity
+        const diagonalFactor = gameConfig.player.diagonalSpeedModifier;
+        velocityX *= diagonalFactor;
+        velocityY *= diagonalFactor;
         
-        // Always start with velocity set to zero
-        player.setVelocity(0, 0);
-        
-        // Handle Y-axis movement
-        if (up) {
-            player.setVelocity(0, -speed);
-            direction = 'up';
-            movingY = true;
-        } else if (down) {
-            player.setVelocity(0, speed);
-            direction = 'down';
-            movingY = true;
-        }
-        
-        // Handle X-axis movement
-        if (left) {
-            player.setVelocity(-speed, 0);
-            direction = 'left';
-            movingX = true;
-        } else if (right) {
-            player.setVelocity(speed, 0);
-            direction = 'right';
-            movingX = true;
-        }
-        
-        // Handle diagonal movement
-        if (movingX && movingY) {
-            // Calculate normalized diagonal velocity
-            const diagonalSpeed = speed * gameConfig.player.diagonalSpeedModifier;
-            
-            if (up && left) {
-                player.setVelocity(-diagonalSpeed, -diagonalSpeed);
-                direction = 'up-left';
-            } else if (up && right) {
-                player.setVelocity(diagonalSpeed, -diagonalSpeed);
-                direction = 'up-right';
-            } else if (down && left) {
-                player.setVelocity(-diagonalSpeed, diagonalSpeed);
-                direction = 'down-left';
-            } else if (down && right) {
-                player.setVelocity(diagonalSpeed, diagonalSpeed);
-                direction = 'down-right';
-            }
-        }
-        
-        // Update player's direction if they're moving
-        if (movingX || movingY) {
-            player.setDirection(direction);
+        if (up && left) {
+            direction = 'up-left';
+        } else if (up && right) {
+            direction = 'up-right';
+        } else if (down && left) {
+            direction = 'down-left';
+        } else if (down && right) {
+            direction = 'down-right';
         }
     }
+    
+    // Apply the final velocity
+    player.setVelocity(velocityX, velocityY);
+    
+    // Update player's direction if they're moving
+    if (movingX || movingY) {
+        player.setDirection(direction);
+    }
+}
 
     // Function to check if a player is outside the ring boundary
     checkOutOfBounds(player, ringCenter, ringRadius) {
@@ -298,17 +354,6 @@ export default class GameScene extends Phaser.Scene {
         }
         
         const pushConfig = gameConfig.push;
-        
-        // Visual feedback for pusher - highlight the triangle
-        if (pusher && pusher.indicator) {
-            this.tweens.add({
-                targets: pusher.indicator,
-                scaleX: pushConfig.feedback.scaleAmount,
-                scaleY: pushConfig.feedback.scaleAmount,
-                duration: pushConfig.feedback.duration,
-                yoyo: true
-            });
-        }
         
         // Create rectangle push area instead of cone
         const startX = pusher.x;
@@ -381,24 +426,6 @@ export default class GameScene extends Phaser.Scene {
     // Function to apply a push with visual effects
     applyPush(pusher, target, dirX, dirY, distance) {
         const pushConfig = gameConfig.push;
-        
-        // Hit successful! Show impact effect
-        if (target.indicator) {
-            this.tweens.add({
-                targets: target.indicator,
-                scaleX: 1.2,
-                scaleY: 1.2,
-                duration: 50,
-                yoyo: true,
-                repeat: 2
-            });
-        }
-        
-        // Make target's triangle flash red
-        const originalColor = target.indicator ? target.indicator.fillColor : 0xFFFFFF;
-        if (target.indicator) {
-            target.indicator.setFillStyle(pushConfig.feedback.targetFlashColor);
-        }
         
         // Apply push force with tweening for smooth movement
         const targetStartX = target.x;
@@ -598,16 +625,16 @@ export default class GameScene extends Phaser.Scene {
                 target.endCounter();
                 
                 // Make thrower spin to show being thrown
-                if (thrower.circle) {
+                if (thrower.sprite) {
                     this.tweens.add({
-                        targets: thrower.circle,
-                        scale: 1.3,
+                        targets: thrower.sprite,
+                        scale: 2.5,
                         angle: 360,
                         duration: throwConfig.feedback.spinDuration,
                         onComplete: () => {
-                            if (thrower && thrower.circle) {
-                                thrower.circle.setScale(1);
-                                thrower.circle.angle = 0;
+                            if (thrower && thrower.sprite) {
+                                thrower.sprite.setScale(2);
+                                thrower.sprite.angle = 0;
                                 
                                 // End round with counter victory
                                 const winner = target === this.player1 ? 'Player 1' : 'Player 2';
@@ -622,9 +649,9 @@ export default class GameScene extends Phaser.Scene {
             
             // Normal throw (no counter) - create a throwing animation
             // Make the thrower flash
-            if (thrower.circle) {
+            if (thrower.sprite) {
                 this.tweens.add({
-                    targets: thrower.circle,
+                    targets: thrower.sprite,
                     alpha: throwConfig.feedback.flashAlpha,
                     duration: throwConfig.feedback.flashDuration,
                     yoyo: true,
@@ -633,16 +660,16 @@ export default class GameScene extends Phaser.Scene {
             }
             
             // Make target spin to show being thrown
-            if (target.circle) {
+            if (target.sprite) {
                 this.tweens.add({
-                    targets: target.circle,
-                    scale: 1.3,
+                    targets: target.sprite,
+                    scale: 2.5,
                     angle: 360,
                     duration: throwConfig.feedback.spinDuration,
                     onComplete: () => {
-                        if (target && target.circle) {
-                            target.circle.setScale(1);
-                            target.circle.angle = 0;
+                        if (target && target.sprite) {
+                            target.sprite.setScale(2);
+                            target.sprite.angle = 0;
                             
                             // End round with throw victory
                             this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);

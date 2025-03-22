@@ -1,28 +1,19 @@
 import gameConfig from './config/gameConfig';
 
 export default class Player {
-    constructor(scene, x, y, sprite, color) {
+    constructor(scene, x, y, spriteKey, color) {
         this.scene = scene;
         
-        // Create invisible physics body with circle hitbox
-        this.sprite = scene.physics.add.sprite(x, y, sprite);
-        this.sprite.setVisible(false);
-        this.sprite.setScale(0.3);
-        this.sprite.body.setCircle(gameConfig.player.hitboxSize);
+        // Create the main sprite 
+        this.sprite = scene.physics.add.sprite(x, y, spriteKey, 'down_idle');
+        this.sprite.setScale(2); // Scale up the sprite to desired size
+        this.sprite.body.setCircle(gameConfig.player.hitboxSize / 2, 
+            this.sprite.width / 2 - gameConfig.player.hitboxSize / 2,
+            this.sprite.height / 2 - gameConfig.player.hitboxSize / 2);
         
         this.direction = 'down';
         this.directionAngle = 0;
-        
-        // Main circle visual
-        this.circle = scene.add.circle(x, y, gameConfig.player.size, color);
-        
-        // Small direction indicator triangle
-        const indicatorShape = gameConfig.player.indicator;
-        this.indicator = scene.add.triangle(
-            x, y + indicatorShape.size, // Position slightly offset from circle center
-            ...indicatorShape.triangleShape,
-            indicatorShape.color 
-        );
+        this.color = color;
         
         // Action states
         this.canMove = true;
@@ -55,20 +46,52 @@ export default class Player {
         
         this.counterActiveCircle = scene.add.circle(x, y, counterVisual.activeCircleSize, counterVisual.activeCircleColor, counterVisual.activeCircleAlpha);
         this.counterActiveCircle.setVisible(false);
-        
-        this.updateIndicator();
     }
     
     setVelocity(x, y) {
         this.sprite.setVelocity(x, y);
+        
+        // Update animation based on movement
+        if (x === 0 && y === 0) {
+            // If not moving, play idle animation
+            this.playIdleAnimation();
+        } else {
+            // If moving, play walk animation for the current direction
+            this.playWalkAnimation();
+        }
+    }
+    
+    playIdleAnimation() {
+        // Set the correct frame for idle in the current direction
+        this.sprite.setFrame(`${this.direction}_idle`);
+    }
+    
+    // Map diagonal directions to main directions for walking animations
+    getWalkingDirection(direction) {
+        // Map diagonal directions to main directions for walking
+        switch(direction) {
+            case 'up-left':
+            case 'up-right':
+                return 'up';
+            case 'down-left':
+            case 'down-right':
+                return 'down';
+            default:
+                return direction;
+        }
+    }
+    
+    playWalkAnimation() {
+        // Get the correct main direction for walking animations
+        const walkDirection = this.getWalkingDirection(this.direction);
+        
+        const animKey = `${walkDirection}_walk`;
+        if (this.sprite.anims.currentAnim?.key !== animKey) {
+            this.sprite.play(animKey);
+        }
     }
     
     updatePosition() {
-        // Update visual elements to follow the sprite
-        this.circle.x = this.sprite.x;
-        this.circle.y = this.sprite.y;
-        this.updateIndicator();
-        
         // Update throw windup visual if active
         if (this.throwWindupCircle.visible) {
             this.throwWindupCircle.x = this.sprite.x;
@@ -109,19 +132,13 @@ export default class Player {
                 case 'up-left': this.directionAngle = 315; break;
             }
             
-            this.updateIndicator();
+            // Update the sprite animation
+            if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
+                this.playIdleAnimation();
+            } else {
+                this.playWalkAnimation();
+            }
         }
-    }
-    
-    updateIndicator() {
-        // Calculate position on the edge of the circle
-        const indicatorShape = gameConfig.player.indicator;
-        const radians = Phaser.Math.DegToRad(this.directionAngle);
-        const distance = indicatorShape.size;
-        
-        this.indicator.x = this.sprite.x + Math.sin(radians) * distance;
-        this.indicator.y = this.sprite.y + Math.cos(radians) * distance;
-        this.indicator.rotation = radians;
     }
     
     get x() {
@@ -424,11 +441,6 @@ export default class Player {
             // Ensure velocity remains at zero during windup
             this.setVelocity(0, 0);
             
-            // Pulsate the player during windup
-            const pulsateProgress = (this.throwWindupTimer % 500) / 500;
-            const pulsateScale = 1 + Math.sin(pulsateProgress * Math.PI * 2) * 0.2;
-            this.indicator.setScale(pulsateScale);
-            
             // Update windup circle size proportional to progress
             const progress = Math.min(this.throwWindupTimer / this.throwWindupDuration, 1);
             this.throwWindupCircle.setScale(progress * 1.5);
@@ -446,11 +458,6 @@ export default class Player {
             
             // Update windup circle size proportional to progress
             this.counterWindupCircle.setScale(progress * 1.5);
-            
-            // Pulsate the indicator during counter windup
-            const pulsateScale = 1 + Math.sin(progress * Math.PI * counterFeedback.trianglePulsateSpeed) * 
-                                    counterFeedback.trianglePulsateAmount;
-            this.indicator.setScale(pulsateScale);
             
             // Color shift from white to yellow as the counter charge progresses
             const colorProgress = Math.min(this.counterWindupTimer / this.counterWindupDuration, 1);
