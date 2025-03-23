@@ -62,32 +62,50 @@ export default class Player {
     }
     
     playIdleAnimation() {
+        // Get base direction and flipping for idle
+        const { baseDirection, flipX } = this.getMirroredDirection(this.direction, true);
+        
         // Set the correct frame for idle in the current direction
-        this.sprite.setFrame(`${this.direction}_idle`);
+        this.sprite.setFrame(`${baseDirection}_idle`);
+        this.sprite.setFlipX(flipX);
     }
     
-    // Map diagonal directions to main directions for walking animations
-    getWalkingDirection(direction) {
-        // Map diagonal directions to main directions for walking
+    // Determine if direction should be mirrored
+    getMirroredDirection(direction, isIdle = false) {
+        let baseDirection = direction;
+        let flipX = false;
+        
+        // Mirror directions that face left
         switch(direction) {
+            case 'left':
+                baseDirection = 'right';
+                flipX = true;
+                break;
             case 'up-left':
-            case 'up-right':
-                return 'up';
+                baseDirection = 'up-right';
+                flipX = true;
+                break;
             case 'down-left':
-            case 'down-right':
-                return 'down';
+                baseDirection = 'down-right';
+                flipX = true;
+                break;
             default:
-                return direction;
+                // Right-facing directions use original sprites
+                break;
         }
+        
+        return { baseDirection, flipX };
     }
     
     playWalkAnimation() {
-        // Get the correct main direction for walking animations
-        const walkDirection = this.getWalkingDirection(this.direction);
+        // Get base direction and flipping for walking
+        const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
         
-        const animKey = `${walkDirection}_walk`;
-        if (this.sprite.anims.currentAnim?.key !== animKey) {
+        const animKey = `${baseDirection}_walk`;
+        
+        if (this.sprite.anims.currentAnim?.key !== animKey || this.sprite.flipX !== flipX) {
             this.sprite.play(animKey);
+            this.sprite.setFlipX(flipX);
         }
     }
     

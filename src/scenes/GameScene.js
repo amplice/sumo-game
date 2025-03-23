@@ -106,47 +106,107 @@ export default class GameScene extends Phaser.Scene {
     }
     
     createAnimations() {
-        const directions = ['down', 'up', 'left', 'right'];
+        // Create animations with explicit frames
         
-        // Create walking animations for main directions
-        directions.forEach(dir => {
-            this.anims.create({
-                key: `${dir}_walk`,
-                frames: this.anims.generateFrameNames('sumo_sprites', { 
-                    prefix: `${dir}_walk_`,
-                    start: 0, 
-                    end: 3
-                }),
-                frameRate: 8,
-                repeat: -1
-            });
+        // Down walking animation
+        this.anims.create({
+            key: 'down_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down_walk_0' },
+                { key: 'sumo_sprites', frame: 'down_walk_1' },
+                { key: 'sumo_sprites', frame: 'down_walk_2' },
+                { key: 'sumo_sprites', frame: 'down_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
         });
         
-        // Create diagonal idle animations
-        const diagonals = ['up-left', 'up-right', 'down-left', 'down-right'];
-        diagonals.forEach(dir => {
-            this.anims.create({
-                key: `${dir}_idle`,
-                frames: [{
-                    key: 'sumo_sprites',
-                    frame: `${dir}_idle`
-                }],
-                frameRate: 1,
-                repeat: 0
-            });
+        // Right walking animation
+        this.anims.create({
+            key: 'right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'right_walk_0' },
+                { key: 'sumo_sprites', frame: 'right_walk_1' },
+                { key: 'sumo_sprites', frame: 'right_walk_2' },
+                { key: 'sumo_sprites', frame: 'right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
         });
         
-        // Create idle animations for the main directions
-        directions.forEach(dir => {
-            this.anims.create({
-                key: `${dir}_idle`,
-                frames: [{
-                    key: 'sumo_sprites',
-                    frame: `${dir}_idle`
-                }],
-                frameRate: 1,
-                repeat: 0
-            });
+        // Up walking animation
+        this.anims.create({
+            key: 'up_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up_walk_0' },
+                { key: 'sumo_sprites', frame: 'up_walk_1' },
+                { key: 'sumo_sprites', frame: 'up_walk_2' },
+                { key: 'sumo_sprites', frame: 'up_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Down-right walking animation
+        this.anims.create({
+            key: 'down-right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down-right_walk_0' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_1' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_2' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Up-right walking animation
+        this.anims.create({
+            key: 'up-right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up-right_walk_0' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_1' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_2' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Create idle animations for all directions
+        this.anims.create({
+            key: 'down_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'down_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'right_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'up_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'up_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'down-right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'down-right_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'up-right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'up-right_idle' }],
+            frameRate: 1,
+            repeat: 0
         });
     }
 
