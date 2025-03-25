@@ -18,6 +18,12 @@ export default class GameScene extends Phaser.Scene {
     preload() {
         // Load the sprite sheet and atlas
         this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+        
+        // Load push attack effect sprite sheet
+        this.load.spritesheet('push_attack', 'assets/sprites/push_sprites.png', { 
+            frameWidth: 60, 
+            frameHeight: 40 
+        });
     }
 
     create() {
@@ -105,110 +111,184 @@ export default class GameScene extends Phaser.Scene {
         }
     }
     
-    createAnimations() {
-        // Create animations with explicit frames
-        
-        // Down walking animation
-        this.anims.create({
-            key: 'down_walk',
-            frames: [
-                { key: 'sumo_sprites', frame: 'down_walk_0' },
-                { key: 'sumo_sprites', frame: 'down_walk_1' },
-                { key: 'sumo_sprites', frame: 'down_walk_2' },
-                { key: 'sumo_sprites', frame: 'down_walk_3' }
-            ],
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        // Right walking animation
-        this.anims.create({
-            key: 'right_walk',
-            frames: [
-                { key: 'sumo_sprites', frame: 'right_walk_0' },
-                { key: 'sumo_sprites', frame: 'right_walk_1' },
-                { key: 'sumo_sprites', frame: 'right_walk_2' },
-                { key: 'sumo_sprites', frame: 'right_walk_3' }
-            ],
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        // Up walking animation
-        this.anims.create({
-            key: 'up_walk',
-            frames: [
-                { key: 'sumo_sprites', frame: 'up_walk_0' },
-                { key: 'sumo_sprites', frame: 'up_walk_1' },
-                { key: 'sumo_sprites', frame: 'up_walk_2' },
-                { key: 'sumo_sprites', frame: 'up_walk_3' }
-            ],
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        // Down-right walking animation
-        this.anims.create({
-            key: 'down-right_walk',
-            frames: [
-                { key: 'sumo_sprites', frame: 'down-right_walk_0' },
-                { key: 'sumo_sprites', frame: 'down-right_walk_1' },
-                { key: 'sumo_sprites', frame: 'down-right_walk_2' },
-                { key: 'sumo_sprites', frame: 'down-right_walk_3' }
-            ],
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        // Up-right walking animation
-        this.anims.create({
-            key: 'up-right_walk',
-            frames: [
-                { key: 'sumo_sprites', frame: 'up-right_walk_0' },
-                { key: 'sumo_sprites', frame: 'up-right_walk_1' },
-                { key: 'sumo_sprites', frame: 'up-right_walk_2' },
-                { key: 'sumo_sprites', frame: 'up-right_walk_3' }
-            ],
-            frameRate: 8,
-            repeat: -1
-        });
-        
-        // Create idle animations for all directions
-        this.anims.create({
-            key: 'down_idle',
-            frames: [{ key: 'sumo_sprites', frame: 'down_idle' }],
-            frameRate: 1,
-            repeat: 0
-        });
-        
-        this.anims.create({
-            key: 'right_idle',
-            frames: [{ key: 'sumo_sprites', frame: 'right_idle' }],
-            frameRate: 1,
-            repeat: 0
-        });
-        
-        this.anims.create({
-            key: 'up_idle',
-            frames: [{ key: 'sumo_sprites', frame: 'up_idle' }],
-            frameRate: 1,
-            repeat: 0
-        });
-        
-        this.anims.create({
-            key: 'down-right_idle',
-            frames: [{ key: 'sumo_sprites', frame: 'down-right_idle' }],
-            frameRate: 1,
-            repeat: 0
-        });
-        
-        this.anims.create({
-            key: 'up-right_idle',
-            frames: [{ key: 'sumo_sprites', frame: 'up-right_idle' }],
-            frameRate: 1,
-            repeat: 0
-        });
-    }
+// Create animations method update for GameScene.js
+createAnimations() {
+    // Create animations with explicit frames
+    
+    // Down walking animation
+    this.anims.create({
+        key: 'down_walk',
+        frames: [
+            { key: 'sumo_sprites', frame: 'down_walk_0' },
+            { key: 'sumo_sprites', frame: 'down_walk_1' },
+            { key: 'sumo_sprites', frame: 'down_walk_2' },
+            { key: 'sumo_sprites', frame: 'down_walk_3' }
+        ],
+        frameRate: 8,
+        repeat: -1
+    });
+    
+    // Right walking animation
+    this.anims.create({
+        key: 'right_walk',
+        frames: [
+            { key: 'sumo_sprites', frame: 'right_walk_0' },
+            { key: 'sumo_sprites', frame: 'right_walk_1' },
+            { key: 'sumo_sprites', frame: 'right_walk_2' },
+            { key: 'sumo_sprites', frame: 'right_walk_3' }
+        ],
+        frameRate: 8,
+        repeat: -1
+    });
+    
+    // Up walking animation
+    this.anims.create({
+        key: 'up_walk',
+        frames: [
+            { key: 'sumo_sprites', frame: 'up_walk_0' },
+            { key: 'sumo_sprites', frame: 'up_walk_1' },
+            { key: 'sumo_sprites', frame: 'up_walk_2' },
+            { key: 'sumo_sprites', frame: 'up_walk_3' }
+        ],
+        frameRate: 8,
+        repeat: -1
+    });
+    
+    // Down-right walking animation
+    this.anims.create({
+        key: 'down-right_walk',
+        frames: [
+            { key: 'sumo_sprites', frame: 'down-right_walk_0' },
+            { key: 'sumo_sprites', frame: 'down-right_walk_1' },
+            { key: 'sumo_sprites', frame: 'down-right_walk_2' },
+            { key: 'sumo_sprites', frame: 'down-right_walk_3' }
+        ],
+        frameRate: 8,
+        repeat: -1
+    });
+    
+    // Up-right walking animation
+    this.anims.create({
+        key: 'up-right_walk',
+        frames: [
+            { key: 'sumo_sprites', frame: 'up-right_walk_0' },
+            { key: 'sumo_sprites', frame: 'up-right_walk_1' },
+            { key: 'sumo_sprites', frame: 'up-right_walk_2' },
+            { key: 'sumo_sprites', frame: 'up-right_walk_3' }
+        ],
+        frameRate: 8,
+        repeat: -1
+    });
+    
+    // Create idle animations for all directions
+    this.anims.create({
+        key: 'down_idle',
+        frames: [{ key: 'sumo_sprites', frame: 'down_idle' }],
+        frameRate: 1,
+        repeat: 0
+    });
+    
+    this.anims.create({
+        key: 'right_idle',
+        frames: [{ key: 'sumo_sprites', frame: 'right_idle' }],
+        frameRate: 1,
+        repeat: 0
+    });
+    
+    this.anims.create({
+        key: 'up_idle',
+        frames: [{ key: 'sumo_sprites', frame: 'up_idle' }],
+        frameRate: 1,
+        repeat: 0
+    });
+    
+    this.anims.create({
+        key: 'down-right_idle',
+        frames: [{ key: 'sumo_sprites', frame: 'down-right_idle' }],
+        frameRate: 1,
+        repeat: 0
+    });
+    
+    this.anims.create({
+        key: 'up-right_idle',
+        frames: [{ key: 'sumo_sprites', frame: 'up-right_idle' }],
+        frameRate: 1,
+        repeat: 0
+    });
+    // Create push attack animation
+this.anims.create({
+    key: 'push_attack_anim',
+    frames: this.anims.generateFrameNumbers('push_attack', { start: 0, end: 3 }),
+    frameRate: 12,
+    repeat: 0
+});
+    // Create push attack animations for each direction
+    // Down (South) push animation
+    this.anims.create({
+        key: 'down_push',
+        frames: [
+            { key: 'sumo_sprites', frame: 'down_push_0' },
+            { key: 'sumo_sprites', frame: 'down_push_1' },
+            { key: 'sumo_sprites', frame: 'down_push_2' },
+            { key: 'sumo_sprites', frame: 'down_push_3' }
+        ],
+        frameRate: 12,
+        repeat: 0
+    });
+    
+    // Right (East) push animation
+    this.anims.create({
+        key: 'right_push',
+        frames: [
+            { key: 'sumo_sprites', frame: 'right_push_0' },
+            { key: 'sumo_sprites', frame: 'right_push_1' },
+            { key: 'sumo_sprites', frame: 'right_push_2' },
+            { key: 'sumo_sprites', frame: 'right_push_3' }
+        ],
+        frameRate: 12,
+        repeat: 0
+    });
+    
+    // Up (North) push animation
+    this.anims.create({
+        key: 'up_push',
+        frames: [
+            { key: 'sumo_sprites', frame: 'up_push_0' },
+            { key: 'sumo_sprites', frame: 'up_push_1' },
+            { key: 'sumo_sprites', frame: 'up_push_2' },
+            { key: 'sumo_sprites', frame: 'up_push_3' }
+        ],
+        frameRate: 12,
+        repeat: 0
+    });
+    
+    // Down-right (Southeast) push animation
+    this.anims.create({
+        key: 'down-right_push',
+        frames: [
+            { key: 'sumo_sprites', frame: 'down-right_push_0' },
+            { key: 'sumo_sprites', frame: 'down-right_push_1' },
+            { key: 'sumo_sprites', frame: 'down-right_push_2' },
+            { key: 'sumo_sprites', frame: 'down-right_push_3' }
+        ],
+        frameRate: 12,
+        repeat: 0
+    });
+    
+    // Up-right (Northeast) push animation
+    this.anims.create({
+        key: 'up-right_push',
+        frames: [
+            { key: 'sumo_sprites', frame: 'up-right_push_0' },
+            { key: 'sumo_sprites', frame: 'up-right_push_1' },
+            { key: 'sumo_sprites', frame: 'up-right_push_2' },
+            { key: 'sumo_sprites', frame: 'up-right_push_3' }
+        ],
+        frameRate: 12,
+        repeat: 0
+    });
+    
+}
 
     update(time, delta) {
         // Update player states
@@ -325,65 +405,64 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Function to handle player movement
-    // Function to handle player movement
-handlePlayerMovement(player, up, down, left, right) {
-    const speed = gameConfig.player.moveSpeed;
-    let movingX = false;
-    let movingY = false;
-    let direction = player.direction;
-    
-    // Track velocity components instead of setting immediately
-    let velocityX = 0;
-    let velocityY = 0;
-    
-    // Handle Y-axis movement
-    if (up) {
-        velocityY = -speed;
-        direction = 'up';
-        movingY = true;
-    } else if (down) {
-        velocityY = speed;
-        direction = 'down';
-        movingY = true;
-    }
-    
-    // Handle X-axis movement
-    if (left) {
-        velocityX = -speed;
-        direction = 'left';
-        movingX = true;
-    } else if (right) {
-        velocityX = speed;
-        direction = 'right';
-        movingX = true;
-    }
-    
-    // Handle diagonal movement
-    if (movingX && movingY) {
-        // Calculate normalized diagonal velocity
-        const diagonalFactor = gameConfig.player.diagonalSpeedModifier;
-        velocityX *= diagonalFactor;
-        velocityY *= diagonalFactor;
+    handlePlayerMovement(player, up, down, left, right) {
+        const speed = gameConfig.player.moveSpeed;
+        let movingX = false;
+        let movingY = false;
+        let direction = player.direction;
         
-        if (up && left) {
-            direction = 'up-left';
-        } else if (up && right) {
-            direction = 'up-right';
-        } else if (down && left) {
-            direction = 'down-left';
-        } else if (down && right) {
-            direction = 'down-right';
+        // Track velocity components instead of setting immediately
+        let velocityX = 0;
+        let velocityY = 0;
+        
+        // Handle Y-axis movement
+        if (up) {
+            velocityY = -speed;
+            direction = 'up';
+            movingY = true;
+        } else if (down) {
+            velocityY = speed;
+            direction = 'down';
+            movingY = true;
+        }
+        
+        // Handle X-axis movement
+        if (left) {
+            velocityX = -speed;
+            direction = 'left';
+            movingX = true;
+        } else if (right) {
+            velocityX = speed;
+            direction = 'right';
+            movingX = true;
+        }
+        
+        // Handle diagonal movement
+        if (movingX && movingY) {
+            // Calculate normalized diagonal velocity
+            const diagonalFactor = gameConfig.player.diagonalSpeedModifier;
+            velocityX *= diagonalFactor;
+            velocityY *= diagonalFactor;
+            
+            if (up && left) {
+                direction = 'up-left';
+            } else if (up && right) {
+                direction = 'up-right';
+            } else if (down && left) {
+                direction = 'down-left';
+            } else if (down && right) {
+                direction = 'down-right';
+            }
+        }
+        
+        // Apply the final velocity
+        player.setVelocity(velocityX, velocityY);
+        
+        // Update player's direction if they're moving
+        if (movingX || movingY) {
+            player.setDirection(direction);
         }
     }
-    
-    // Apply the final velocity
-    player.setVelocity(velocityX, velocityY);
-    
-    // Update player's direction if they're moving
-    if (movingX || movingY) {
-        player.setDirection(direction);
-    }
-}
 
     // Function to check if a player is outside the ring boundary
     checkOutOfBounds(player, ringCenter, ringRadius) {
@@ -395,93 +474,131 @@ handlePlayerMovement(player, up, down, left, right) {
         return distance > ringRadius - gameConfig.player.outOfBoundsMargin;
     }
 
-    // Function to attempt a push
-    attemptPush(pusher, target) {
-        // Calculate push direction vector based on pusher's facing direction
-        let pushDirX = 0;
-        let pushDirY = 0;
-        
-        // Set push direction based on pusher's current direction
-        switch (pusher.direction) {
-            case 'up': pushDirX = 0; pushDirY = -1; break;
-            case 'down': pushDirX = 0; pushDirY = 1; break;
-            case 'left': pushDirX = -1; pushDirY = 0; break;
-            case 'right': pushDirX = 1; pushDirY = 0; break;
-            case 'up-left': pushDirX = -0.707; pushDirY = -0.707; break;
-            case 'up-right': pushDirX = 0.707; pushDirY = -0.707; break;
-            case 'down-left': pushDirX = -0.707; pushDirY = 0.707; break;
-            case 'down-right': pushDirX = 0.707; pushDirY = 0.707; break;
-        }
-        
-        const pushConfig = gameConfig.push;
-        
-        // Create rectangle push area instead of cone
-        const startX = pusher.x;
-        const startY = pusher.y;
-        const angle = Math.atan2(pushDirY, pushDirX);
-        
-        // Use a container with a rectangle for rotation
-        const container = this.add.container(startX, startY);
-        
-        // Create a rectangle for push area, centered properly
-        const pushArea = this.add.graphics();
-        pushArea.fillStyle(pushConfig.visual.color, pushConfig.visual.alpha);
-        pushArea.fillRect(0, -pushConfig.width/2, pushConfig.range, pushConfig.width);
-        
-        // Add to container and rotate
-        container.add(pushArea);
-        container.rotation = angle;
-        
-        // Animate the push effect
-        this.tweens.add({
-            targets: container,
-            alpha: 0,
-            duration: pushConfig.visual.duration,
-            onComplete: () => {
-                if (container && container.active) {
-                    container.destroy();
-                }
-            }
-        });
-        
-        // Hit detection for rectangular area
-        const dx = target.x - startX;
-        const dy = target.y - startY;
-        
-        // Calculate the projection of the target onto the push direction vector
-        const projection = dx * pushDirX + dy * pushDirY;
-        
-        // Calculate perpendicular distance from the center line
-        const perpDist = Math.abs(dx * pushDirY - dy * pushDirX);
-        
-        // Check if within the rectangle (in front of pusher, within width/2 of center line, within range)
-        const hitSuccessful = (projection > 0) && (projection <= pushConfig.range) && (perpDist <= pushConfig.width/2);
-        
-        if (hitSuccessful && target) {
-            // If target is in counter active state, reverse the push!
-            if (target.isCounterActive) {
-                // Counter the push - reverse direction and push the original pusher back
-                this.counterPush(target, pusher, -pushDirX, -pushDirY);
-                return;
-            }
-            
-            // If target is winding up for a throw or counter, cancel it
-            if (target.isThrowWindingUp) {
-                target.cancelThrow();
-            }
-            if (target.isCounterWindingUp) {
-                target.cancelCounter();
-                
-                // Extra pushback during counter windup
-                const extraFactor = 1.5; // 50% further
-                this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance * extraFactor);
-                return;
-            }
-            
-            // Normal push
-            this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance);
-        }
+// Function to attempt a push
+attemptPush(pusher, target) {
+    // Calculate push direction vector based on pusher's facing direction
+    let pushDirX = 0;
+    let pushDirY = 0;
+    
+    // Set push direction based on pusher's current direction
+    switch (pusher.direction) {
+        case 'up': pushDirX = 0; pushDirY = -1; break;
+        case 'down': pushDirX = 0; pushDirY = 1; break;
+        case 'left': pushDirX = -1; pushDirY = 0; break;
+        case 'right': pushDirX = 1; pushDirY = 0; break;
+        case 'up-left': pushDirX = -0.707; pushDirY = -0.707; break;
+        case 'up-right': pushDirX = 0.707; pushDirY = -0.707; break;
+        case 'down-left': pushDirX = -0.707; pushDirY = 0.707; break;
+        case 'down-right': pushDirX = 0.707; pushDirY = 0.707; break;
     }
+    
+    const pushConfig = gameConfig.push;
+    
+    // 1. Play character's push animation
+    if (typeof pusher.playPushAnimation === 'function') {
+        pusher.playPushAnimation();
+    }
+    
+    // 2. Create push attack sprite effect
+    const startX = pusher.x;
+    const startY = pusher.y;
+    const angle = Math.atan2(pushDirY, pushDirX) * (180 / Math.PI);
+    
+    // Calculate offset for the push attack sprite
+    const characterOffset = 20; // Distance to offset from character center
+    const spriteStartX = pusher.x + (pushDirX * characterOffset);
+    const spriteStartY = pusher.y + (pushDirY * characterOffset);
+    
+    // Create the push attack sprite
+    const pushAttack = this.add.sprite(spriteStartX, spriteStartY, 'push_attack');
+    pushAttack.setOrigin(0, 0.5); // Set origin to left-center for proper rotation
+    pushAttack.angle = angle; // Rotate to match push direction
+    
+    // Play the push attack animation
+    pushAttack.play('push_attack_anim');
+    
+    // Remove the sprite when animation completes
+    pushAttack.on('animationcomplete', () => {
+        pushAttack.destroy();
+    });
+    
+    // 3. Create the green box effect (optional - can be removed)
+    // Map directions to exact angles for green box rotation 
+    let boxAngle;
+    switch (pusher.direction) {
+        case 'right': boxAngle = 0; break;
+        case 'down-right': boxAngle = 45; break;
+        case 'down': boxAngle = 90; break;
+        case 'down-left': boxAngle = 135; break;
+        case 'left': boxAngle = 180; break;
+        case 'up-left': boxAngle = 225; break;
+        case 'up': boxAngle = 270; break;
+        case 'up-right': boxAngle = 315; break;
+        default: boxAngle = 0;
+    }
+    
+    // Use a container with a rectangle for rotation
+    const container = this.add.container(startX, startY);
+    
+    // Create a rectangle for push area, centered properly
+    const pushArea = this.add.graphics();
+    pushArea.fillStyle(pushConfig.visual.color, pushConfig.visual.alpha);
+    pushArea.fillRect(0, -pushConfig.width/2, pushConfig.range, pushConfig.width);
+    
+    // Add to container and rotate
+    container.add(pushArea);
+    container.rotation = boxAngle * (Math.PI / 180); // Convert to radians for Phaser rotation
+    
+    // Animate the push effect
+    this.tweens.add({
+        targets: container,
+        alpha: 0,
+        duration: pushConfig.visual.duration,
+        onComplete: () => {
+            if (container && container.active) {
+                container.destroy();
+            }
+        }
+    });
+    
+    // Hit detection
+    const dx = target.x - startX;
+    const dy = target.y - startY;
+    
+    // Calculate the projection of the target onto the push direction vector
+    const projection = dx * pushDirX + dy * pushDirY;
+    
+    // Calculate perpendicular distance from the center line
+    const perpDist = Math.abs(dx * pushDirY - dy * pushDirX);
+    
+    // Check if within the rectangle (in front of pusher, within width/2 of center line, within range)
+    const hitSuccessful = (projection > 0) && (projection <= pushConfig.range) && (perpDist <= pushConfig.width/2);
+    
+    if (hitSuccessful && target) {
+        // If target is in counter active state, reverse the push!
+        if (target.isCounterActive) {
+            // Counter the push - reverse direction and push the original pusher back
+            this.counterPush(target, pusher, -pushDirX, -pushDirY);
+            return;
+        }
+        
+        // If target is winding up for a throw or counter, cancel it
+        if (target.isThrowWindingUp) {
+            target.cancelThrow();
+        }
+        if (target.isCounterWindingUp) {
+            target.cancelCounter();
+            
+            // Extra pushback during counter windup
+            const extraFactor = 1.5; // 50% further
+            this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance * extraFactor);
+            return;
+        }
+        
+        // Normal push
+        this.applyPush(pusher, target, pushDirX, pushDirY, pushConfig.distance);
+    }
+}
     
     // Function to apply a push with visual effects
     applyPush(pusher, target, dirX, dirY, distance) {

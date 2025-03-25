@@ -109,6 +109,30 @@ export default class Player {
         }
     }
     
+// Add this method to the Player class
+playPushAnimation() {
+    // Get base direction and flipping for push
+    const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+    
+    // Set the flip state
+    this.sprite.setFlipX(flipX);
+    
+    // Animation key
+    const animKey = `${baseDirection}_push`;
+    
+    // Play the animation
+    this.sprite.play(animKey);
+    
+    // Return to idle when animation completes
+    this.sprite.once('animationcomplete', () => {
+        if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
+            this.playIdleAnimation();
+        } else {
+            this.playWalkAnimation();
+        }
+    });
+}
+    
     updatePosition() {
         // Update throw windup visual if active
         if (this.throwWindupCircle.visible) {
