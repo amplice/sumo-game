@@ -4,14 +4,25 @@ export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
         this.selectedDifficulty = 'medium';
+        this.initialized = false;
+    }
+
+    init() {
+        console.log('MenuScene init called');
+        this.selectedDifficulty = 'medium';
+        this.initialized = false;
     }
 
     preload() {
-        // Load the sprite sheet and atlas
-        this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+        // Load the sprite sheet and atlas if not already loaded
+        if (!this.textures.exists('sumo_sprites')) {
+            this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
+        }
     }
 
     create() {
+        console.log('MenuScene create called');
+        
         // Create a darker background for better contrast
         this.add.rectangle(0, 0, 1024, 768, 0x222222)
             .setOrigin(0, 0);
@@ -68,12 +79,12 @@ export default class MenuScene extends Phaser.Scene {
 
         // Create buttons with better spacing and consistent sizing
         this.createButton(1024/2, 260, 'Two Player', 250, 50, () => {
-            this.scene.start('GameScene', { mode: 'twoPlayer' });
+            this.safeStartScene('GameScene', { mode: 'twoPlayer' });
         });
 
         // Single Player button (with difficulty display)
         this.singlePlayerButton = this.createButton(1024/2, 330, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, 250, 50, () => {
-            this.scene.start('GameScene', { 
+            this.safeStartScene('GameScene', { 
                 mode: 'singlePlayer',
                 difficulty: this.selectedDifficulty
             });
@@ -83,12 +94,37 @@ export default class MenuScene extends Phaser.Scene {
         this.createDifficultyButtons();
 
         this.createButton(1024/2, 450, 'How to Play', 250, 50, () => {
-            this.scene.start('TutorialScene');
+            this.safeStartScene('TutorialScene');
         });
         
         // Test Scene button (for debugging)
         this.createButton(1024/2, 520, 'Animation Test', 250, 50, () => {
-            this.scene.start('TestScene');
+            this.safeStartScene('TestScene');
+        });
+        
+        this.initialized = true;
+        console.log('MenuScene create completed');
+    }
+    
+    safeStartScene(sceneKey, data = {}) {
+        console.log(`Safely starting scene: ${sceneKey}`);
+        
+        // Cancel any active tweens
+        this.tweens.killAll();
+        
+        // Remove any temporary input listeners
+        this.input.keyboard.removeAllKeys(true);
+        
+        // Disable all interactive elements to prevent multiple clicks
+        this.children.list.forEach(child => {
+            if (child.input && child.input.enabled) {
+                child.disableInteractive();
+            }
+        });
+        
+        // Short delay before transition to ensure cleanup
+        this.time.delayedCall(50, () => {
+            this.scene.start(sceneKey, data);
         });
     }
 
@@ -102,12 +138,19 @@ export default class MenuScene extends Phaser.Scene {
             fill: '#FFFFFF',
         }).setOrigin(0.5);
         
+        // Use a unique name for each button to avoid issues
+        const listenerName = `button-${x}-${y}`;
+        
+        // Remove any existing listeners to prevent duplicates
+        button.removeAllListeners('pointerup');
+        
         button.setInteractive({ useHandCursor: true })
             .on('pointerover', () => button.fillColor = buttonConfig.hoverColor)
             .on('pointerout', () => button.fillColor = buttonConfig.color)
             .on('pointerdown', () => button.fillColor = buttonConfig.pressColor)
             .on('pointerup', () => {
                 button.fillColor = buttonConfig.hoverColor;
+                // Call our callback safely
                 callback();
             });
             
@@ -130,8 +173,12 @@ export default class MenuScene extends Phaser.Scene {
             const height = 40;
                           
             const button = this.add.rectangle(x, y, width, height, color)
-                .setStrokeStyle(2, 0xFFFFFF)
-                .setInteractive({ useHandCursor: true })
+                .setStrokeStyle(2, 0xFFFFFF);
+                
+            // Make sure we don't have duplicate listeners
+            button.removeAllListeners('pointerup');
+            
+            button.setInteractive({ useHandCursor: true })
                 .on('pointerup', () => {
                     this.setDifficulty(difficulty);
                 });
@@ -168,5 +215,26 @@ export default class MenuScene extends Phaser.Scene {
     
     formatDifficulty(difficulty) {
         return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+    }
+    
+    // Called when scene is shutting down
+    shutdown() {
+        console.log('MenuScene shutdown called');
+        
+        // Kill all running tweens
+        this.tweens.killAll();
+        
+        // Stop all animations
+        this.children.list.forEach(child => {
+            if (child.anims) {
+                child.anims.stop();
+            }
+        });
+        
+        // Clear references to buttons to avoid memory leaks
+        this.difficultyButtons = {};
+        this.singlePlayerButton = null;
+        
+        console.log('MenuScene shutdown complete');
     }
 }
