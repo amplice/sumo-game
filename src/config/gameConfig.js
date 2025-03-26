@@ -6,7 +6,7 @@
 const gameConfig = {
     // Game Area
     ring: {
-        radius: 250,     // Radius of the ring in pixels
+        radius: 300,     // Radius of the ring in pixels
         color: 0xCCCCCC, // Ring color (light gray)
         borderWidth: 4,  // Border width in pixels
         borderColor: 0x000000, // Border color (black)
@@ -14,11 +14,12 @@ const gameConfig = {
 
     // Player Configuration
     player: {
-        moveSpeed: 170,                // Base movement speed in pixels per second
+        moveSpeed: 220,                // Base movement speed in pixels per second
         diagonalSpeedModifier: 0.707,  // Speed modifier when moving diagonally (√2/2)
-        size: 18,                      // Player radius in pixels
-        hitboxSize: 23,                // Physics hitbox radius (slightly larger than visual)
-        aiSpeed: 170,                  // AI player speed (slightly slower than player)
+        spriteScale: 2.5,                // Scale factor for player sprites
+        size: 20,                      // Player radius in pixels
+        hitboxSize: 20,                // Physics hitbox radius (slightly larger than visual)
+        aiSpeed: 220,                  // AI player speed (slightly slower than player)
         outOfBoundsMargin: 15,         // Distance from ring edge to count as out-of-bounds
         indicator: {
             size: 0,                  // Distance from center to indicator
@@ -37,14 +38,14 @@ const gameConfig = {
 
     // Push Action
     push: {
-        cooldown: 500,                 // Push cooldown in ms
-        range: 60,                     // Push detection range in pixels
+        cooldown: 350,                 // Push cooldown in ms
+        range: 80,                     // Push detection range in pixels
         width: 40,                     // Push area width in pixels
         distance: 100,                 // How far target is pushed in pixels
         counterPushDistance: 200,      // Extra push distance when target is countering
         visual: {
             color: 0x00FF00,           // Push area color (green)
-            alpha: 0.3,                // Push area transparency
+            alpha: 0,                // Push area transparency
             duration: 300,             // Visual effect duration in ms
         },
         feedback: {
@@ -63,8 +64,8 @@ const gameConfig = {
 
     // Throw Action
     throw: {
-        windupDuration: 1000,          // Throw windup duration in ms
-        range: 100,                    // Maximum throw range in pixels
+        windupDuration: 600,          // Throw windup duration in ms
+        range: 110,                    // Maximum throw range in pixels
         angle: 45,                     // Throw cone angle in degrees
         coneSize: {                    // Cone visual parameters
             length: 100,               // Length of the cone
@@ -92,8 +93,8 @@ const gameConfig = {
 
     // Counter Action
     counter: {
-        windupDuration: 500,           // Counter windup duration in ms
-        activeDuration: 500,           // Counter active duration in ms
+        windupDuration: 250,           // Counter windup duration in ms
+        activeDuration: 250,           // Counter active duration in ms
         visual: {
             windupCircleSize: 15,      // Size of windup circle
             windupCircleColor: 0xFFFFFF, // Initial color of windup circle (white)

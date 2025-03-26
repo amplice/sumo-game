@@ -24,29 +24,54 @@ export default class GameScene extends Phaser.Scene {
             frameWidth: 60, 
             frameHeight: 40 
         });
+        this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
+        // Add after your atlas load in preload()
+this.load.on('complete', () => {
+    console.log("Atlas loaded, checking frames...");
+    const atlas = this.textures.get('sumo_sprites');
+    const frames = atlas.getFrameNames();
+    console.log("Available frames:", frames);
+    console.log("Push frames exist:", 
+      frames.includes('down_push_0'), 
+      frames.includes('right_push_0'), 
+      frames.includes('up_push_0')
+    );
+  });
     }
 
     create() {
-        // Create the ring (circular boundary)
-        this.ringRadius = gameConfig.ring.radius;
-        this.ringCenter = { x: 400, y: 300 };
-        const ring = this.add.circle(
-            this.ringCenter.x, 
-            this.ringCenter.y, 
-            this.ringRadius, 
-            gameConfig.ring.color
-        );
-        ring.setStrokeStyle(
-            gameConfig.ring.borderWidth, 
-            gameConfig.ring.borderColor
-        );
+// Add the background image first (will be beneath everything else)
+const backgroundImage = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'ring_background');
+    
+// Set the background image to cover the whole game area
+const scaleX = this.cameras.main.width / backgroundImage.width;
+const scaleY = this.cameras.main.height / backgroundImage.height;
+const scale = Math.max(scaleX, scaleY);
+backgroundImage.setScale(scale);
+
+// Create the ring (circular boundary)
+this.ringRadius = gameConfig.ring.radius;
+this.ringCenter = { x: 1024/2, y: 768/2 };
+
+// The ring circle can now have transparent fill since we have a background image
+const ring = this.add.circle(
+    this.ringCenter.x, 
+    this.ringCenter.y, 
+    this.ringRadius, 
+    gameConfig.ring.color,
+    0.2  // More transparent fill
+);
+ring.setStrokeStyle(
+    gameConfig.ring.borderWidth, 
+    gameConfig.ring.borderColor
+);
         
         // Create animations for all directions
         this.createAnimations();
         
         // Add players to the scene
-        this.player1 = new Player(this, 300, 400, 'sumo_sprites', gameConfig.player.colors.player1);
-        this.player2 = new Player(this, 500, 200, 'sumo_sprites', gameConfig.player.colors.player2);
+        this.player1 = new Player(this, 1024/2 - 100, 768/2 + 100, 'sumo_sprites', gameConfig.player.colors.player1);
+        this.player2 = new Player(this, 1024/2 + 100, 768/2 - 100, 'sumo_sprites', gameConfig.player.colors.player2);
         
         // Set up collision between players
         this.physics.add.collider(this.player1.sprite, this.player2.sprite);
@@ -85,7 +110,7 @@ export default class GameScene extends Phaser.Scene {
         // Add UI elements
         this.roundText = this.add.text(20, 20, 'Round: 1', gameConfig.ui.fonts.normal);
         this.scoreText = this.add.text(20, 50, 'P1: 0  P2: 0', gameConfig.ui.fonts.normal);
-        this.winnerText = this.add.text(400, 150, '', gameConfig.ui.fonts.winner)
+        this.winnerText = this.add.text(1024/2, 150, '', gameConfig.ui.fonts.winner)
             .setOrigin(0.5, 0.5)
             .setVisible(false);
         
@@ -111,186 +136,205 @@ export default class GameScene extends Phaser.Scene {
         }
     }
     
-// Create animations method update for GameScene.js
-createAnimations() {
-    // Create animations with explicit frames
-    
-    // Down walking animation
-    this.anims.create({
-        key: 'down_walk',
-        frames: [
-            { key: 'sumo_sprites', frame: 'down_walk_0' },
-            { key: 'sumo_sprites', frame: 'down_walk_1' },
-            { key: 'sumo_sprites', frame: 'down_walk_2' },
-            { key: 'sumo_sprites', frame: 'down_walk_3' }
-        ],
-        frameRate: 8,
-        repeat: -1
-    });
-    
-    // Right walking animation
-    this.anims.create({
-        key: 'right_walk',
-        frames: [
-            { key: 'sumo_sprites', frame: 'right_walk_0' },
-            { key: 'sumo_sprites', frame: 'right_walk_1' },
-            { key: 'sumo_sprites', frame: 'right_walk_2' },
-            { key: 'sumo_sprites', frame: 'right_walk_3' }
-        ],
-        frameRate: 8,
-        repeat: -1
-    });
-    
-    // Up walking animation
-    this.anims.create({
-        key: 'up_walk',
-        frames: [
-            { key: 'sumo_sprites', frame: 'up_walk_0' },
-            { key: 'sumo_sprites', frame: 'up_walk_1' },
-            { key: 'sumo_sprites', frame: 'up_walk_2' },
-            { key: 'sumo_sprites', frame: 'up_walk_3' }
-        ],
-        frameRate: 8,
-        repeat: -1
-    });
-    
-    // Down-right walking animation
-    this.anims.create({
-        key: 'down-right_walk',
-        frames: [
-            { key: 'sumo_sprites', frame: 'down-right_walk_0' },
-            { key: 'sumo_sprites', frame: 'down-right_walk_1' },
-            { key: 'sumo_sprites', frame: 'down-right_walk_2' },
-            { key: 'sumo_sprites', frame: 'down-right_walk_3' }
-        ],
-        frameRate: 8,
-        repeat: -1
-    });
-    
-    // Up-right walking animation
-    this.anims.create({
-        key: 'up-right_walk',
-        frames: [
-            { key: 'sumo_sprites', frame: 'up-right_walk_0' },
-            { key: 'sumo_sprites', frame: 'up-right_walk_1' },
-            { key: 'sumo_sprites', frame: 'up-right_walk_2' },
-            { key: 'sumo_sprites', frame: 'up-right_walk_3' }
-        ],
-        frameRate: 8,
-        repeat: -1
-    });
-    
-    // Create idle animations for all directions
-    this.anims.create({
-        key: 'down_idle',
-        frames: [{ key: 'sumo_sprites', frame: 'down_idle' }],
-        frameRate: 1,
-        repeat: 0
-    });
-    
-    this.anims.create({
-        key: 'right_idle',
-        frames: [{ key: 'sumo_sprites', frame: 'right_idle' }],
-        frameRate: 1,
-        repeat: 0
-    });
-    
-    this.anims.create({
-        key: 'up_idle',
-        frames: [{ key: 'sumo_sprites', frame: 'up_idle' }],
-        frameRate: 1,
-        repeat: 0
-    });
-    
-    this.anims.create({
-        key: 'down-right_idle',
-        frames: [{ key: 'sumo_sprites', frame: 'down-right_idle' }],
-        frameRate: 1,
-        repeat: 0
-    });
-    
-    this.anims.create({
-        key: 'up-right_idle',
-        frames: [{ key: 'sumo_sprites', frame: 'up-right_idle' }],
-        frameRate: 1,
-        repeat: 0
-    });
-    // Create push attack animation
-this.anims.create({
-    key: 'push_attack_anim',
-    frames: this.anims.generateFrameNumbers('push_attack', { start: 0, end: 3 }),
-    frameRate: 12,
-    repeat: 0
+    createAnimations() {
+        // Check if animations are already created
+        if (this.anims.exists('down_walk')) {
+            console.log("Animations already exist, skipping creation");
+            return;
+        }
+
+        console.log("Creating animations for the first time");
+        
+        // Create animations with explicit frames
+        
+        // Down walking animation
+        this.anims.create({
+            key: 'down_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down_walk_0' },
+                { key: 'sumo_sprites', frame: 'down_walk_1' },
+                { key: 'sumo_sprites', frame: 'down_walk_2' },
+                { key: 'sumo_sprites', frame: 'down_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Right walking animation
+        this.anims.create({
+            key: 'right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'right_walk_0' },
+                { key: 'sumo_sprites', frame: 'right_walk_1' },
+                { key: 'sumo_sprites', frame: 'right_walk_2' },
+                { key: 'sumo_sprites', frame: 'right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Up walking animation
+        this.anims.create({
+            key: 'up_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up_walk_0' },
+                { key: 'sumo_sprites', frame: 'up_walk_1' },
+                { key: 'sumo_sprites', frame: 'up_walk_2' },
+                { key: 'sumo_sprites', frame: 'up_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Down-right walking animation
+        this.anims.create({
+            key: 'down-right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down-right_walk_0' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_1' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_2' },
+                { key: 'sumo_sprites', frame: 'down-right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Up-right walking animation
+        this.anims.create({
+            key: 'up-right_walk',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up-right_walk_0' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_1' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_2' },
+                { key: 'sumo_sprites', frame: 'up-right_walk_3' }
+            ],
+            frameRate: 8,
+            repeat: -1
+        });
+        
+        // Create idle animations for all directions
+        this.anims.create({
+            key: 'down_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'down_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'right_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'up_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'up_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'down-right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'down-right_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        this.anims.create({
+            key: 'up-right_idle',
+            frames: [{ key: 'sumo_sprites', frame: 'up-right_idle' }],
+            frameRate: 1,
+            repeat: 0
+        });
+        
+        // Create push attack animation
+        this.anims.create({
+            key: 'push_attack_anim',
+            frames: this.anims.generateFrameNumbers('push_attack', { start: 0, end: 3 }),
+            frameRate: 12,
+            repeat: 0
+        });
+        
+        // Create push attack animations for each direction
+        // Down (South) push animation
+        this.anims.create({
+            key: 'down_push',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down_push_0' },
+                { key: 'sumo_sprites', frame: 'down_push_1' },
+                { key: 'sumo_sprites', frame: 'down_push_2' },
+                { key: 'sumo_sprites', frame: 'down_push_3' }
+            ],
+            frameRate: 12,
+            repeat: 0
+        });
+        
+        // Right (East) push animation
+        this.anims.create({
+            key: 'right_push',
+            frames: [
+                { key: 'sumo_sprites', frame: 'right_push_0' },
+                { key: 'sumo_sprites', frame: 'right_push_1' },
+                { key: 'sumo_sprites', frame: 'right_push_2' },
+                { key: 'sumo_sprites', frame: 'right_push_3' }
+            ],
+            frameRate: 12,
+            repeat: 0
+        });
+        
+        // Up (North) push animation
+        this.anims.create({
+            key: 'up_push',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up_push_0' },
+                { key: 'sumo_sprites', frame: 'up_push_1' },
+                { key: 'sumo_sprites', frame: 'up_push_2' },
+                { key: 'sumo_sprites', frame: 'up_push_3' }
+            ],
+            frameRate: 12,
+            repeat: 0
+        });
+        
+        // Down-right (Southeast) push animation
+        this.anims.create({
+            key: 'down-right_push',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down-right_push_0' },
+                { key: 'sumo_sprites', frame: 'down-right_push_1' },
+                { key: 'sumo_sprites', frame: 'down-right_push_2' },
+                { key: 'sumo_sprites', frame: 'down-right_push_3' }
+            ],
+            frameRate: 12,
+            repeat: 0
+        });
+        
+        // Up-right (Northeast) push animation
+        this.anims.create({
+            key: 'up-right_push',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up-right_push_0' },
+                { key: 'sumo_sprites', frame: 'up-right_push_1' },
+                { key: 'sumo_sprites', frame: 'up-right_push_2' },
+                { key: 'sumo_sprites', frame: 'up-right_push_3' }
+            ],
+            frameRate: 12,
+            repeat: 0
+        });
+        // Add at the end of your create() method
+console.log("Checking animations...");
+const animKeys = ['down_push', 'right_push', 'up_push', 'down-right_push', 'up-right_push'];
+animKeys.forEach(key => {
+  console.log(`Animation ${key} exists: ${this.anims.exists(key)}`);
 });
-    // Create push attack animations for each direction
-    // Down (South) push animation
-    this.anims.create({
-        key: 'down_push',
-        frames: [
-            { key: 'sumo_sprites', frame: 'down_push_0' },
-            { key: 'sumo_sprites', frame: 'down_push_1' },
-            { key: 'sumo_sprites', frame: 'down_push_2' },
-            { key: 'sumo_sprites', frame: 'down_push_3' }
-        ],
-        frameRate: 12,
-        repeat: 0
-    });
-    
-    // Right (East) push animation
-    this.anims.create({
-        key: 'right_push',
-        frames: [
-            { key: 'sumo_sprites', frame: 'right_push_0' },
-            { key: 'sumo_sprites', frame: 'right_push_1' },
-            { key: 'sumo_sprites', frame: 'right_push_2' },
-            { key: 'sumo_sprites', frame: 'right_push_3' }
-        ],
-        frameRate: 12,
-        repeat: 0
-    });
-    
-    // Up (North) push animation
-    this.anims.create({
-        key: 'up_push',
-        frames: [
-            { key: 'sumo_sprites', frame: 'up_push_0' },
-            { key: 'sumo_sprites', frame: 'up_push_1' },
-            { key: 'sumo_sprites', frame: 'up_push_2' },
-            { key: 'sumo_sprites', frame: 'up_push_3' }
-        ],
-        frameRate: 12,
-        repeat: 0
-    });
-    
-    // Down-right (Southeast) push animation
-    this.anims.create({
-        key: 'down-right_push',
-        frames: [
-            { key: 'sumo_sprites', frame: 'down-right_push_0' },
-            { key: 'sumo_sprites', frame: 'down-right_push_1' },
-            { key: 'sumo_sprites', frame: 'down-right_push_2' },
-            { key: 'sumo_sprites', frame: 'down-right_push_3' }
-        ],
-        frameRate: 12,
-        repeat: 0
-    });
-    
-    // Up-right (Northeast) push animation
-    this.anims.create({
-        key: 'up-right_push',
-        frames: [
-            { key: 'sumo_sprites', frame: 'up-right_push_0' },
-            { key: 'sumo_sprites', frame: 'up-right_push_1' },
-            { key: 'sumo_sprites', frame: 'up-right_push_2' },
-            { key: 'sumo_sprites', frame: 'up-right_push_3' }
-        ],
-        frameRate: 12,
-        repeat: 0
-    });
-    
-}
+    }
 
     update(time, delta) {
+        // Skip everything if round has already ended
+        if (this.roundEnded) {
+            return;
+        }
+        
         // Update player states
         this.player1.update(delta);
         this.player2.update(delta);
@@ -494,10 +538,8 @@ attemptPush(pusher, target) {
     
     const pushConfig = gameConfig.push;
     
-    // 1. Play character's push animation
-    if (typeof pusher.playPushAnimation === 'function') {
-        pusher.playPushAnimation();
-    }
+    // 1. Play character's push animation - always call directly
+    pusher.playPushAnimation();
     
     // 2. Create push attack sprite effect
     const startX = pusher.x;
@@ -801,25 +843,25 @@ attemptPush(pusher, target) {
                 // End the counter state
                 target.endCounter();
                 
-                // Make thrower spin to show being thrown
-                if (thrower.sprite) {
-                    this.tweens.add({
-                        targets: thrower.sprite,
-                        scale: 2.5,
-                        angle: 360,
-                        duration: throwConfig.feedback.spinDuration,
-                        onComplete: () => {
-                            if (thrower && thrower.sprite) {
-                                thrower.sprite.setScale(2);
-                                thrower.sprite.angle = 0;
-                                
-                                // End round with counter victory
-                                const winner = target === this.player1 ? 'Player 1' : 'Player 2';
-                                this.endRound(winner, true);
-                            }
-                        }
-                    });
-                }
+// Make thrower spin to show being thrown
+if (thrower.sprite) {
+    this.tweens.add({
+        targets: thrower.sprite,
+        scale: gameConfig.player.spriteScale * 1.25, // Scale up by 25% from base scale
+        angle: 360,
+        duration: throwConfig.feedback.spinDuration,
+        onComplete: () => {
+            if (thrower && thrower.sprite) {
+                thrower.sprite.setScale(gameConfig.player.spriteScale); // Use config value
+                thrower.sprite.angle = 0;
+                
+                // End round with counter victory
+                const winner = target === this.player1 ? 'Player 1' : 'Player 2';
+                this.endRound(winner, true);
+            }
+        }
+    });
+}
                 
                 return true;
             }
@@ -836,24 +878,24 @@ attemptPush(pusher, target) {
                 });
             }
             
-            // Make target spin to show being thrown
-            if (target.sprite) {
-                this.tweens.add({
-                    targets: target.sprite,
-                    scale: 2.5,
-                    angle: 360,
-                    duration: throwConfig.feedback.spinDuration,
-                    onComplete: () => {
-                        if (target && target.sprite) {
-                            target.sprite.setScale(2);
-                            target.sprite.angle = 0;
-                            
-                            // End round with throw victory
-                            this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
-                        }
-                    }
-                });
+// Make target spin to show being thrown
+if (target.sprite) {
+    this.tweens.add({
+        targets: target.sprite,
+        scale: gameConfig.player.spriteScale * 1.25, // Scale up by 25% from base scale
+        angle: 360,
+        duration: throwConfig.feedback.spinDuration,
+        onComplete: () => {
+            if (target && target.sprite) {
+                target.sprite.setScale(gameConfig.player.spriteScale); // Use config value
+                target.sprite.angle = 0;
+                
+                // End round with throw victory
+                this.endRound(thrower === this.player1 ? 'Player 1' : 'Player 2', true);
             }
+        }
+    });
+}
             
             // Display throw effect line between players
             const graphics = this.add.graphics();
@@ -881,89 +923,201 @@ attemptPush(pusher, target) {
         
         return false;
     }
-
-    // Function to end the round and display the winner
-    endRound(winner, byThrow = false) {
-        // Update win counts
-        if (winner === 'Player 1') {
-            this.player1Wins++;
-        } else {
-            this.player2Wins++;
+// Method to clean up all visual effects
+cleanupVisualEffects() {
+    // Destroy any push attack sprites
+    this.children.list.forEach(child => {
+        // Find and destroy all push_attack sprites
+        if (child.texture && child.texture.key === 'push_attack') {
+            child.destroy();
         }
         
-        // Update score text
-        this.scoreText.setText(`P1: ${this.player1Wins}  P2: ${this.player2Wins}`);
-        
-        // Display winner with appropriate message
-        const winType = byThrow ? '(threw opponent)' : '(pushed opponent out)';
-        this.winnerText.setText(`${winner} wins round ${this.round}!\n${winType}`);
-        this.winnerText.setVisible(true);
-        
-        // Check if match is over (best of 3)
-        if (this.player1Wins >= 2 || this.player2Wins >= 2) {
-            this.winnerText.setText(`${winner} wins the match!`);
-            
-            // Add a "Return to Menu" button
-            const buttonConfig = gameConfig.ui.buttons;
-            const menuButton = this.add.text(400, 250, 'Return to Menu', {
-                fontSize: '24px',
-                fill: '#FFF',
-                backgroundColor: '#0000AA',
-                padding: { x: 20, y: 10 }
-            }).setOrigin(0.5)
-              .setInteractive({ useHandCursor: true })
-              .on('pointerup', () => {
-                  // Cancel all timers and tweens to prevent callbacks firing after scene change
-                  this.tweens.killAll();
-                  this.time.removeAllEvents();
-                  this.scene.start('MenuScene');
-              });
-        } else {
-            // Set up next round after 2 seconds
-            this.time.delayedCall(2000, () => {
-                this.round++;
-                this.roundText.setText(`Round: ${this.round}`);
-                this.resetRound();
-            });
+        // Find and destroy all graphics objects (used for push visuals, throw cones, etc.)
+        if (child instanceof Phaser.GameObjects.Graphics) {
+            child.destroy();
         }
-    }
-
-    // Function to reset players for a new round
-    resetRound() {
-        // Cancel all active tweens to prevent callbacks firing during or after reset
-        this.tweens.killAll();
         
-        // Reset player positions
-        this.player1.x = 300;
-        this.player1.y = 400;
-        this.player2.x = 500;
-        this.player2.y = 200;
-        
-        // Reset player states
-        this.player1.canMove = true;
-        this.player1.sprite.clearTint();
-        this.player1.cancelThrow();
-        // Reset counter states for player 1
-        this.player1.isCounterWindingUp = false;
-        this.player1.isCounterActive = false;
+        // Find and destroy all containers (used for push area visuals)
+        if (child instanceof Phaser.GameObjects.Container) {
+            child.destroy();
+        }
+    });
+    
+    // Hide all circle visuals for players
+    if (this.player1) {
+        this.player1.throwWindupCircle.setVisible(false);
         this.player1.counterWindupCircle.setVisible(false);
         this.player1.counterActiveCircle.setVisible(false);
         
-        this.player2.canMove = true;
-        this.player2.sprite.clearTint();
-        this.player2.cancelThrow();
-        // Reset counter states for player 2
-        this.player2.isCounterWindingUp = false;
-        this.player2.isCounterActive = false;
+        // Clear any throw cones that might be present
+        if (this.player1.throwCone) {
+            this.player1.throwCone.destroy();
+            this.player1.throwCone = null;
+        }
+    }
+    
+    if (this.player2) {
+        this.player2.throwWindupCircle.setVisible(false);
         this.player2.counterWindupCircle.setVisible(false);
         this.player2.counterActiveCircle.setVisible(false);
         
-        // Hide winner text
-        this.winnerText.setVisible(false);
-        
-        // Update AI for the new round
-        if (this.gameMode === 'singlePlayer' && this.ai) {
-            this.ai.newRound(this.round, this.player1Wins, this.player2Wins);
+        // Clear any throw cones that might be present
+        if (this.player2.throwCone) {
+            this.player2.throwCone.destroy();
+            this.player2.throwCone = null;
         }
     }
+    
+    // Reset player sprites to idle animations
+    if (this.player1 && this.player1.sprite) {
+        this.player1.sprite.anims.stop();
+        this.player1.playIdleAnimation();
+    }
+    
+    if (this.player2 && this.player2.sprite) {
+        this.player2.sprite.anims.stop();
+        this.player2.playIdleAnimation();
+    }
+    
+    // Clear any lingering tints or alpha changes
+    if (this.player1 && this.player1.sprite) {
+        this.player1.sprite.clearTint();
+        this.player1.sprite.setAlpha(1);
+    }
+    
+    if (this.player2 && this.player2.sprite) {
+        this.player2.sprite.clearTint();
+        this.player2.sprite.setAlpha(1);
+    }
+}
+// Function to end the round and display the winner
+endRound(winner, byThrow = false) {
+    // Skip if round is already ended
+    if (this.roundEnded) {
+        return;
+    }
+    
+    // Immediately cancel all timers and tweens to prevent delayed actions
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    
+    // Add a game state flag to prevent further actions
+    this.roundEnded = true;
+    
+    // Immediately halt all player movement and actions
+    this.player1.canMove = false;
+    this.player1.setVelocity(0, 0);
+    this.player1.cancelThrow();
+    this.player1.endCounter();
+    
+    this.player2.canMove = false;
+    this.player2.setVelocity(0, 0);
+    this.player2.cancelThrow();
+    this.player2.endCounter();
+    
+    // Clean up all visual effects
+    this.cleanupVisualEffects();
+    
+    // Update win counts
+    if (winner === 'Player 1') {
+        this.player1Wins++;
+    } else {
+        this.player2Wins++;
+    }
+    
+    // Update score text
+    this.scoreText.setText(`P1: ${this.player1Wins}  P2: ${this.player2Wins}`);
+    
+    // Display winner with appropriate message
+    const winType = byThrow ? '(threw opponent)' : '(pushed opponent out)';
+    this.winnerText.setText(`${winner} wins round ${this.round}!\n${winType}`);
+    this.winnerText.setVisible(true);
+    
+    // Check if match is over (best of 3)
+    if (this.player1Wins >= 2 || this.player2Wins >= 2) {
+        this.winnerText.setText(`${winner} wins the match!`);
+        
+        // Add a "Return to Menu" button
+        const buttonConfig = gameConfig.ui.buttons;
+        const menuButton = this.add.text(1024/2, 300, 'Return to Menu', {
+            fontSize: '24px',
+            fill: '#FFF',
+            backgroundColor: '#0000AA',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+          .on('pointerup', () => {
+              // Cancel all timers and tweens to prevent callbacks firing after scene change
+              this.tweens.killAll();
+              this.time.removeAllEvents();
+              this.scene.start('MenuScene');
+          });
+    } else {
+        // Set up next round after 2 seconds
+        this.time.delayedCall(2000, () => {
+            this.round++;
+            this.roundText.setText(`Round: ${this.round}`);
+            this.resetRound();
+        });
+    }
+}
+
+resetRound() {
+    // Clear the round ended flag
+    this.roundEnded = false;
+    
+    // Cancel all active tweens and timers
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    
+    // Clean up all visual effects for a fresh start
+    this.cleanupVisualEffects();
+    
+    // Reset player positions
+    this.player1.x = 1024/2 - 120;
+    this.player1.y = 768/2 + 120;
+    this.player2.x = 1024/2 + 120;
+    this.player2.y = 768/2 - 120;
+    
+    // Reset player states
+    this.player1.canMove = true;
+    this.player1.sprite.clearTint();
+    this.player1.sprite.setScale(gameConfig.player.spriteScale);
+    this.player1.sprite.angle = 0;
+    this.player1.sprite.setAlpha(1); // Ensure visibility
+    this.player1.cancelThrow();
+    this.player1.pushCooldown = 0; // Reset cooldowns
+    
+    // Reset counter states for player 1
+    this.player1.isCounterWindingUp = false;
+    this.player1.isCounterActive = false;
+    this.player1.counterWindupTimer = 0;
+    this.player1.counterActiveTimer = 0;
+    
+    this.player2.canMove = true;
+    this.player2.sprite.clearTint();
+    this.player2.sprite.setScale(gameConfig.player.spriteScale);
+    this.player2.sprite.angle = 0;
+    this.player2.sprite.setAlpha(1); // Ensure visibility
+    this.player2.cancelThrow();
+    this.player2.pushCooldown = 0; // Reset cooldowns
+    
+    // Reset counter states for player 2
+    this.player2.isCounterWindingUp = false;
+    this.player2.isCounterActive = false;
+    this.player2.counterWindupTimer = 0;
+    this.player2.counterActiveTimer = 0;
+    
+    // Reset player animations to idle
+    this.player1.playIdleAnimation();
+    this.player2.playIdleAnimation();
+    
+    // Hide winner text
+    this.winnerText.setVisible(false);
+    
+    // Update AI for the new round
+    if (this.gameMode === 'singlePlayer' && this.ai) {
+        this.ai.newRound(this.round, this.player1Wins, this.player2Wins);
+    }
+}
 }

@@ -14,11 +14,11 @@ export default class TutorialScene extends Phaser.Scene {
 
     create() {
         // Add dark background
-        this.add.rectangle(0, 0, 800, 600, 0x222222)
+        this.add.rectangle(0, 0, 1024, 768, 0x222222)
             .setOrigin(0, 0);
 
         // Add title with better styling
-        this.add.text(400, 30, 'HOW TO PLAY', {
+        this.add.text(1024/2, 80, 'HOW TO PLAY', {
             fontSize: '32px',
             fontStyle: 'bold',
             fill: '#FFFFFF',
@@ -27,40 +27,48 @@ export default class TutorialScene extends Phaser.Scene {
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 3, stroke: true, fill: true }
         }).setOrigin(0.5);
 
-        // Add sumo sprites for visual examples
-        const blueSumo = this.add.sprite(200, 200, 'sumo_sprites', 'right_idle').setScale(2);
-        const redSumo = this.add.sprite(600, 200, 'sumo_sprites', 'left_idle').setScale(2);
+        // // Add sumo sprites for visual examples - using available frames
+        // const blueSumo = this.add.sprite(300, 200, 'sumo_sprites', 'right_idle')
+        //     .setScale(gameConfig.player.spriteScale);
         
-        // Create simple animations for demo
-        if (!this.anims.exists('tutorial_blue_walk')) {
-            this.anims.create({
-                key: 'tutorial_blue_walk',
-                frames: this.anims.generateFrameNames('sumo_sprites', { 
-                    prefix: 'right_walk_',
-                    start: 0, 
-                    end: 3
-                }),
-                frameRate: 8,
-                repeat: -1
-            });
-        }
+        // // For the red sumo, we'll use right_idle but flip it horizontally to simulate left
+        // const redSumo = this.add.sprite(700, 200, 'sumo_sprites', 'right_idle')
+        //     .setScale(gameConfig.player.spriteScale)
+        //     .setFlipX(true); // Flip horizontally to simulate looking left
         
-        if (!this.anims.exists('tutorial_red_walk')) {
-            this.anims.create({
-                key: 'tutorial_red_walk',
-                frames: this.anims.generateFrameNames('sumo_sprites', { 
-                    prefix: 'left_walk_',
-                    start: 0, 
-                    end: 3
-                }),
-                frameRate: 8,
-                repeat: -1
-            });
-        }
+        // // Create simple animations for demo - use existing frames
+        // if (!this.anims.exists('tutorial_blue_walk')) {
+        //     this.anims.create({
+        //         key: 'tutorial_blue_walk',
+        //         frames: [
+        //             { key: 'sumo_sprites', frame: 'right_walk_0' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_1' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_2' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_3' }
+        //         ],
+        //         frameRate: 8,
+        //         repeat: -1
+        //     });
+        // }
         
-        // Play walking animations
-        blueSumo.play('tutorial_blue_walk');
-        redSumo.play('tutorial_red_walk');
+        // if (!this.anims.exists('tutorial_red_walk')) {
+        //     // Use the same frames as blue but will be flipped horizontally
+        //     this.anims.create({
+        //         key: 'tutorial_red_walk',
+        //         frames: [
+        //             { key: 'sumo_sprites', frame: 'right_walk_0' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_1' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_2' },
+        //             { key: 'sumo_sprites', frame: 'right_walk_3' }
+        //         ],
+        //         frameRate: 8,
+        //         repeat: -1
+        //     });
+        // }
+        
+        // // Play walking animations
+        // blueSumo.play('tutorial_blue_walk');
+        // redSumo.play('tutorial_red_walk');
 
         // Instructions text - updated for latest game version and compressed
         const instructions = [
@@ -90,18 +98,18 @@ export default class TutorialScene extends Phaser.Scene {
         ];
 
         // Create a container with a mask for scrollable content
-        const contentY = 80;
+        const contentY = 120;
         const contentHeight = 400;  // Height of visible content area
         
-        // Add instructions text in a more compact format
-        const instructionsText = this.add.text(50, contentY, instructions, {
-            fontSize: '12px',
+        // Add instructions text in a more compact format - adjusted for larger screen
+        const instructionsText = this.add.text(100, contentY, instructions, {
+            fontSize: '16px',
             fill: '#FFFFFF',
-            lineSpacing: 6
+            lineSpacing: 8
         });
 
         // Create back button well below the content
-        this.createButton(600, 530, 'Back to Menu', 150, 30, () => {
+        this.createButton(1024/2, 700, 'Back to Menu', 200, 40, () => {
             this.scene.start('MenuScene');
         });
     }
@@ -112,7 +120,7 @@ export default class TutorialScene extends Phaser.Scene {
             .setStrokeStyle(2, 0xFFFFFF);
         
         const buttonText = this.add.text(x, y, text, {
-            fontSize: '12px',
+            fontSize: '16px',
             fill: '#FFFFFF',
             fontStyle: 'bold'
         }).setOrigin(0.5);

@@ -13,17 +13,19 @@ export default class MenuScene extends Phaser.Scene {
 
     create() {
         // Create a darker background for better contrast
-        this.add.rectangle(0, 0, 800, 600, 0x222222)
+        this.add.rectangle(0, 0, 1024, 768, 0x222222)
             .setOrigin(0, 0);
             
         // Create the ring background - moved down to not block title
         const ringRadius = gameConfig.ring.radius - 20;
-        const ring = this.add.circle(400, 340, ringRadius, gameConfig.ring.color);
+        const ring = this.add.circle(1024/2, 400, ringRadius, gameConfig.ring.color);
         ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
 
         // Add sumo sprites to the menu for visual preview
-        const blueSumo = this.add.sprite(300, 340, 'sumo_sprites', 'down_idle').setScale(2);
-        const redSumo = this.add.sprite(500, 340, 'sumo_sprites', 'down_idle').setScale(2);
+        const blueSumo = this.add.sprite(1024/2 - 100, 185, 'sumo_sprites', 'down_idle')
+            .setScale(gameConfig.player.spriteScale);
+        const redSumo = this.add.sprite(1024/2 + 100, 185, 'sumo_sprites', 'down_idle')
+            .setScale(gameConfig.player.spriteScale);
         
         // Create simple idle animations
         if (!this.anims.exists('menu_blue_idle')) {
@@ -55,7 +57,7 @@ export default class MenuScene extends Phaser.Scene {
         redSumo.play('menu_red_idle');
 
         // Add title - positioned above the ring
-        this.add.text(400, 80, 'SUMO DUEL', {
+        this.add.text(1024/2, 100, 'SUMO DUEL', {
             fontSize: '64px',
             fontStyle: 'bold',
             fill: '#FFFFFF',
@@ -65,12 +67,12 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Create buttons with better spacing and consistent sizing
-        this.createButton(400, 260, 'Two Player', 250, 50, () => {
+        this.createButton(1024/2, 260, 'Two Player', 250, 50, () => {
             this.scene.start('GameScene', { mode: 'twoPlayer' });
         });
 
         // Single Player button (with difficulty display)
-        this.singlePlayerButton = this.createButton(400, 330, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, 250, 50, () => {
+        this.singlePlayerButton = this.createButton(1024/2, 330, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, 250, 50, () => {
             this.scene.start('GameScene', { 
                 mode: 'singlePlayer',
                 difficulty: this.selectedDifficulty
@@ -80,8 +82,13 @@ export default class MenuScene extends Phaser.Scene {
         // Difficulty selection buttons with better spacing and consistent sizing
         this.createDifficultyButtons();
 
-        this.createButton(400, 450, 'How to Play', 250, 50, () => {
+        this.createButton(1024/2, 450, 'How to Play', 250, 50, () => {
             this.scene.start('TutorialScene');
+        });
+        
+        // Test Scene button (for debugging)
+        this.createButton(1024/2, 520, 'Animation Test', 250, 50, () => {
+            this.scene.start('TestScene');
         });
     }
 
@@ -114,7 +121,7 @@ export default class MenuScene extends Phaser.Scene {
         this.difficultyButtons = {};
         
         difficulties.forEach((difficulty, index) => {
-            const x = 400 + (index - 1) * spacing;
+            const x = 1024/2 + (index - 1) * spacing;
             const color = (difficulty === this.selectedDifficulty) ? 
                           0x00AA00 : // Green for selected
                           0x555555;  // Gray for unselected

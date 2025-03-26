@@ -2,12 +2,13 @@ import Phaser from 'phaser';
 import MenuScene from './scenes/MenuScene';
 import GameScene from './scenes/GameScene';
 import TutorialScene from './scenes/TutorialScene';
+import TestScene from './scenes/TestScene';
 
 // Game configuration
 const config = {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width:1024,
+    height: 768,
     backgroundColor: '#333333',
     physics: {
         default: 'arcade',
@@ -16,7 +17,7 @@ const config = {
             debug: false
         }
     },
-    scene: [MenuScene, GameScene, TutorialScene],
+    scene: [MenuScene, GameScene, TutorialScene, TestScene],
     parent: 'game'
 };
 
