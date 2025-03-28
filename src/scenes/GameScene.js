@@ -40,6 +40,13 @@ export default class GameScene extends Phaser.Scene {
             frameWidth: 60, 
             frameHeight: 40 
         });
+
+        // Load throw attack effect sprite sheet
+        this.load.spritesheet('throw_attack', 'assets/sprites/throw_sprites.png', { 
+            frameWidth: 64, 
+            frameHeight: 32 
+        });
+
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
             // Load sound effects
     this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
@@ -350,11 +357,11 @@ export default class GameScene extends Phaser.Scene {
             repeat: 0
         });
         
-        // Create push attack animation
+        // Create push attack animation effect
         this.anims.create({
             key: 'push_attack_anim',
             frames: this.anims.generateFrameNumbers('push_attack', { start: 0, end: 3 }),
-            frameRate: 12,
+            frameRate: 14,
             repeat: 0
         });
         
@@ -420,6 +427,14 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'up-right_push_2' },
                 { key: 'sumo_sprites', frame: 'up-right_push_3' }
             ],
+            frameRate: 12,
+            repeat: 0
+        });
+
+        // Create throw attack animation effect
+        this.anims.create({
+            key: 'throw_attack_anim',
+            frames: this.anims.generateFrameNumbers('throw_attack', { start: 0, end: 3 }),
             frameRate: 12,
             repeat: 0
         });
@@ -717,7 +732,7 @@ export default class GameScene extends Phaser.Scene {
         const angle = Math.atan2(pushDirY, pushDirX) * (180 / Math.PI);
         
         // Calculate offset for the push attack sprite
-        const characterOffset = 20; // Distance to offset from character center
+        const characterOffset = 15; // Distance to offset from character center
         const spriteStartX = pusher.x + (pushDirX * characterOffset);
         const spriteStartY = pusher.y + (pushDirY * characterOffset);
         

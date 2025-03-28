@@ -302,6 +302,15 @@ export default class Player {
             // Show windup visual
             this.throwWindupCircle.setVisible(true);
             this.throwWindupCircle.setAlpha(gameConfig.throw.visual.windupCircleAlpha);
+// Add throw dust effect at the player's feet
+const throwDustEffect = this.scene.add.sprite(this.x, this.y + 10, 'throw_attack');
+throwDustEffect.setOrigin(0.5, 0);
+throwDustEffect.play('throw_attack_anim');
+
+// Remove the sprite when animation completes
+throwDustEffect.once('animationcomplete', () => {
+    throwDustEffect.destroy();
+});
             
             // Get base direction and flipping for throw
             const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
