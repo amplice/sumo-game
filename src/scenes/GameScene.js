@@ -432,7 +432,7 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'down_throw_1' },
                 { key: 'sumo_sprites', frame: 'down_throw_2' }
             ],
-            frameRate: 8,
+            frameRate: 12,
             repeat: 0
         });
         
@@ -444,7 +444,7 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'right_throw_1' },
                 { key: 'sumo_sprites', frame: 'right_throw_2' }
             ],
-            frameRate: 8,
+            frameRate: 12,
             repeat: 0
         });
         
@@ -456,7 +456,7 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'up_throw_1' },
                 { key: 'sumo_sprites', frame: 'up_throw_2' }
             ],
-            frameRate: 8,
+            frameRate: 12,
             repeat: 0
         });
         
@@ -468,7 +468,7 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'down-right_throw_1' },
                 { key: 'sumo_sprites', frame: 'down-right_throw_2' }
             ],
-            frameRate: 8,
+            frameRate: 12,
             repeat: 0
         });
         
@@ -480,70 +480,10 @@ export default class GameScene extends Phaser.Scene {
                 { key: 'sumo_sprites', frame: 'up-right_throw_1' },
                 { key: 'sumo_sprites', frame: 'up-right_throw_2' }
             ],
-            frameRate: 8,
+            frameRate: 12,
             repeat: 0
         });
         
-        // Create throw animations for all directions
-        // Down (South) throw animation
-        this.anims.create({
-            key: 'down_throw',
-            frames: [
-                { key: 'sumo_sprites', frame: 'down_throw_0' },
-                { key: 'sumo_sprites', frame: 'down_throw_1' },
-                { key: 'sumo_sprites', frame: 'down_throw_2' }
-            ],
-            frameRate: 8,
-            repeat: 0
-        });
-        
-        // Right (East) throw animation
-        this.anims.create({
-            key: 'right_throw',
-            frames: [
-                { key: 'sumo_sprites', frame: 'right_throw_0' },
-                { key: 'sumo_sprites', frame: 'right_throw_1' },
-                { key: 'sumo_sprites', frame: 'right_throw_2' }
-            ],
-            frameRate: 8,
-            repeat: 0
-        });
-        
-        // Up (North) throw animation
-        this.anims.create({
-            key: 'up_throw',
-            frames: [
-                { key: 'sumo_sprites', frame: 'up_throw_0' },
-                { key: 'sumo_sprites', frame: 'up_throw_1' },
-                { key: 'sumo_sprites', frame: 'up_throw_2' }
-            ],
-            frameRate: 8,
-            repeat: 0
-        });
-        
-        // Down-right (Southeast) throw animation
-        this.anims.create({
-            key: 'down-right_throw',
-            frames: [
-                { key: 'sumo_sprites', frame: 'down-right_throw_0' },
-                { key: 'sumo_sprites', frame: 'down-right_throw_1' },
-                { key: 'sumo_sprites', frame: 'down-right_throw_2' }
-            ],
-            frameRate: 8,
-            repeat: 0
-        });
-        
-        // Up-right (Northeast) throw animation
-        this.anims.create({
-            key: 'up-right_throw',
-            frames: [
-                { key: 'sumo_sprites', frame: 'up-right_throw_0' },
-                { key: 'sumo_sprites', frame: 'up-right_throw_1' },
-                { key: 'sumo_sprites', frame: 'up-right_throw_2' }
-            ],
-            frameRate: 8,
-            repeat: 0
-        });
     }
 
     update(time, delta) {

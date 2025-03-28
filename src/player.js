@@ -60,6 +60,11 @@ export default class Player {
             return;
         }
         
+        // Don't update animation during throw windup - we want to keep the first frame visible
+        if (this.isThrowWindingUp) {
+            return;
+        }
+        
         // Update animation based on movement
         if (x === 0 && y === 0) {
             // If not moving, play idle animation
@@ -71,6 +76,11 @@ export default class Player {
     }
     
     playIdleAnimation() {
+        // Skip if in throw windup - we want to keep the first frame visible
+        if (this.isThrowWindingUp) {
+            return;
+        }
+        
         // Get base direction and flipping for idle
         const { baseDirection, flipX } = this.getMirroredDirection(this.direction, true);
         
@@ -107,6 +117,11 @@ export default class Player {
     }
     
     playWalkAnimation() {
+        // Skip if in throw windup - we want to keep the first frame visible
+        if (this.isThrowWindingUp) {
+            return;
+        }
+        
         // Get base direction and flipping for walking
         const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
         
@@ -155,33 +170,38 @@ export default class Player {
         // Get base direction and flipping for throw
         const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
         
-        console.log("playThrowAnimation called - direction:", this.direction, "baseDirection:", baseDirection);
+        console.log("playThrowAnimation called - frames 1-2");
         
         // Set the flip state
         this.sprite.setFlipX(flipX);
         
-        // Animation key
-        const animKey = `${baseDirection}_throw`;
+        // Create a custom animation key for the throw completion
+        const animKey = `${baseDirection}_throw_complete`;
         
-        console.log("Using animation key:", animKey, "exists:", this.scene.anims.exists(animKey));
+        // Check if we need to create this animation
+        if (!this.scene.anims.exists(animKey)) {
+            // Create a temporary animation that only uses frames 1 and 2
+            this.scene.anims.create({
+                key: animKey,
+                frames: [
+                    { key: 'sumo_sprites', frame: `${baseDirection}_throw_1` },
+                    { key: 'sumo_sprites', frame: `${baseDirection}_throw_2` }
+                ],
+                // Set frame rate to 12fps so it completes in about 167ms
+                frameRate: 12,
+                repeat: 0
+            });
+            
+            console.log(`Created temporary animation: ${animKey}`);
+        }
         
         // Force stop any current animations
         this.sprite.anims.stop();
         
-        // Stop player movement
-        this.sprite.setVelocity(0, 0);
-        
-        // Play the animation
+        // Play only the completion part of the throw animation
         this.sprite.play(animKey);
         
-        console.log("After play call, current anim:", this.sprite.anims.currentAnim?.key);
-        
-        // Return to idle when animation completes
-        this.sprite.once('animationcomplete', () => {
-            console.log("Throw animation completed");
-            // Go back to idle since we've stopped the player
-            this.playIdleAnimation();
-        });
+        console.log("Playing throw animation:", animKey);
     }
     
     updatePosition() {
@@ -225,11 +245,19 @@ export default class Player {
                 case 'up-left': this.directionAngle = 315; break;
             }
             
-            // Update the sprite animation
-            if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
-                this.playIdleAnimation();
+            // Only update animation if not in throw windup
+            if (!this.isThrowWindingUp) {
+                // Update the sprite animation
+                if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
+                    this.playIdleAnimation();
+                } else {
+                    this.playWalkAnimation();
+                }
             } else {
-                this.playWalkAnimation();
+                // If in throw windup, update the first frame of the throw animation
+                const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+                this.sprite.setFrame(`${baseDirection}_throw_0`);
+                this.sprite.setFlipX(flipX);
             }
         }
     }
@@ -275,6 +303,18 @@ export default class Player {
             this.throwWindupCircle.setVisible(true);
             this.throwWindupCircle.setAlpha(gameConfig.throw.visual.windupCircleAlpha);
             
+            // Get base direction and flipping for throw
+            const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+            
+            // Set the flip state
+            this.sprite.setFlipX(flipX);
+            
+            // Set the first frame of the throw animation during windup
+            this.sprite.anims.stop();
+            this.sprite.setFrame(`${baseDirection}_throw_0`);
+            
+            console.log("Throw windup started - showing first frame:", `${baseDirection}_throw_0`);
+            
             return true;
         }
         return false;
@@ -293,6 +333,9 @@ export default class Player {
                 this.throwCone.destroy();
                 this.throwCone = null;
             }
+            
+            // Reset to idle animation
+            this.playIdleAnimation();
         }
     }
     
@@ -386,14 +429,15 @@ export default class Player {
     executeThrow() {
         // Execute the throw (will be called automatically after windup)
         if (this.isThrowWindingUp) {
+            // Change state variables
             this.isThrowWindingUp = false;
             this.canMove = true;
             this.throwWindupCircle.setVisible(false);
             
-            console.log("executeThrow - Starting throw animation for direction:", this.direction);
+            console.log("executeThrow - Throw execution (animation already playing)");
             
-            // Play throw animation
-            this.playThrowAnimation();
+            // Note: We no longer need to start the animation here as it was
+            // already started at ~72% of the windup time
             
             // Direction vectors for each direction
             const directionVectors = {
@@ -542,6 +586,11 @@ export default class Player {
             // Update windup circle size proportional to progress
             const progress = Math.min(this.throwWindupTimer / this.throwWindupDuration, 1);
             this.throwWindupCircle.setScale(progress * 1.5);
+            
+            // Start playing frames 1-2 at 72.2% of windup (for 12fps)
+            if (progress > 0.722 && !this.sprite.anims.isPlaying) {
+                this.playThrowAnimation();
+            }
         }
         
         // Update counter windup timer
@@ -602,15 +651,20 @@ export default class Player {
             return;
         }
         
-// Update animation based on movement if no special animation is playing
-if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
-    // Only switch to idle if we're not playing any other animation
-    if (!this.sprite.anims.isPlaying) {
-        this.playIdleAnimation();
+        // Skip animation updates during throw windup
+        if (this.isThrowWindingUp) {
+            return;
+        }
+        
+        // Update animation based on movement if no special animation is playing
+        if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
+            // Only switch to idle if we're not playing any other animation
+            if (!this.sprite.anims.isPlaying) {
+                this.playIdleAnimation();
+            }
+        } else {
+            // Only update walk animation if we're actually moving
+            this.playWalkAnimation();
+        }
     }
-} else {
-    // Only update walk animation if we're actually moving
-    this.playWalkAnimation();
-}
-}
 }
