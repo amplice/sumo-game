@@ -4,12 +4,12 @@ export default class Player {
     constructor(scene, x, y, spriteKey, color) {
         this.scene = scene;
         
- // Create the main sprite 
- this.sprite = scene.physics.add.sprite(x, y, spriteKey, 'down_idle');
- this.sprite.setScale(gameConfig.player.spriteScale); // Use config value
- this.sprite.body.setCircle(gameConfig.player.hitboxSize / 2, 
-     this.sprite.width / 2 - gameConfig.player.hitboxSize / 2,
-     this.sprite.height / 2 - gameConfig.player.hitboxSize / 2);
+        // Create the main sprite 
+        this.sprite = scene.physics.add.sprite(x, y, spriteKey, 'down_idle');
+        this.sprite.setScale(gameConfig.player.spriteScale); // Use config value
+        this.sprite.body.setCircle(gameConfig.player.hitboxSize / 2, 
+            this.sprite.width / 2 - gameConfig.player.hitboxSize / 2,
+            this.sprite.height / 2 - gameConfig.player.hitboxSize / 2);
         
         this.direction = 'down';
         this.directionAngle = 0;
@@ -47,15 +47,16 @@ export default class Player {
         this.counterActiveCircle = scene.add.circle(x, y, counterVisual.activeCircleSize, counterVisual.activeCircleColor, counterVisual.activeCircleAlpha);
         this.counterActiveCircle.setVisible(false);
     }
+    
     setVelocity(x, y) {
         this.sprite.setVelocity(x, y);
         
-        // Only update animation if not currently playing a special animation (like push)
+        // Only update animation if not currently playing a special animation (like push or throw)
         if (this.sprite.anims.currentAnim && 
             !this.sprite.anims.currentAnim.repeat && 
             this.sprite.anims.isPlaying &&
-            this.sprite.anims.currentAnim.key.includes('push')) {
-            // Don't interrupt push animation
+            (this.sprite.anims.currentAnim.key.includes('push') || this.sprite.anims.currentAnim.key.includes('throw'))) {
+            // Don't interrupt special animations
             return;
         }
         
@@ -145,6 +146,39 @@ export default class Player {
             // Re-enable movement
             this.canMove = originalCanMove;
             
+            // Go back to idle since we've stopped the player
+            this.playIdleAnimation();
+        });
+    }
+    
+    playThrowAnimation() {
+        // Get base direction and flipping for throw
+        const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+        
+        console.log("playThrowAnimation called - direction:", this.direction, "baseDirection:", baseDirection);
+        
+        // Set the flip state
+        this.sprite.setFlipX(flipX);
+        
+        // Animation key
+        const animKey = `${baseDirection}_throw`;
+        
+        console.log("Using animation key:", animKey, "exists:", this.scene.anims.exists(animKey));
+        
+        // Force stop any current animations
+        this.sprite.anims.stop();
+        
+        // Stop player movement
+        this.sprite.setVelocity(0, 0);
+        
+        // Play the animation
+        this.sprite.play(animKey);
+        
+        console.log("After play call, current anim:", this.sprite.anims.currentAnim?.key);
+        
+        // Return to idle when animation completes
+        this.sprite.once('animationcomplete', () => {
+            console.log("Throw animation completed");
             // Go back to idle since we've stopped the player
             this.playIdleAnimation();
         });
@@ -356,6 +390,11 @@ export default class Player {
             this.canMove = true;
             this.throwWindupCircle.setVisible(false);
             
+            console.log("executeThrow - Starting throw animation for direction:", this.direction);
+            
+            // Play throw animation
+            this.playThrowAnimation();
+            
             // Direction vectors for each direction
             const directionVectors = {
                 'up': { x: 0, y: -1 },
@@ -554,20 +593,24 @@ export default class Player {
         }
         
         // Only update animation if not currently playing a non-looping animation
-        // This prevents animation interruptions during push actions
-        if (this.sprite.anims.currentAnim && !this.sprite.anims.currentAnim.repeat && this.sprite.anims.isPlaying) {
-            // Animation is playing and non-looping - don't interrupt
-        } else {
-            // Update animation based on movement if no special animation is playing
-            if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
-                // Only switch to idle if we're not playing any other animation
-                if (!this.sprite.anims.isPlaying) {
-                    this.playIdleAnimation();
-                }
-            } else {
-                // Only update walk animation if we're actually moving
-                this.playWalkAnimation();
-            }
+        // This prevents animation interruptions during push and throw actions
+        if (this.sprite.anims.currentAnim && 
+            !this.sprite.anims.currentAnim.repeat && 
+            this.sprite.anims.isPlaying &&
+            (this.sprite.anims.currentAnim.key.includes('push') || this.sprite.anims.currentAnim.key.includes('throw'))) {
+            // Animation is playing and non-looping (push or throw) - don't interrupt
+            return;
         }
+        
+// Update animation based on movement if no special animation is playing
+if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
+    // Only switch to idle if we're not playing any other animation
+    if (!this.sprite.anims.isPlaying) {
+        this.playIdleAnimation();
     }
+} else {
+    // Only update walk animation if we're actually moving
+    this.playWalkAnimation();
+}
+}
 }

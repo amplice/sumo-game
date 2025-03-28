@@ -10,6 +10,7 @@ export default class TutorialScene extends Phaser.Scene {
         if (!this.textures.exists('sumo_sprites')) {
             this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
         }
+        this.load.audio('nonbattle_music', 'assets/audio/nonbattle_music.mp3');
     }
 
     create() {
@@ -112,6 +113,15 @@ export default class TutorialScene extends Phaser.Scene {
         this.createButton(1024/2, 700, 'Back to Menu', 200, 40, () => {
             this.scene.start('MenuScene');
         });
+            // Check if music is already playing from the menu scene
+    if (!this.sound.get('nonbattle_music')) {
+        // If not, play it
+        this.backgroundMusic = this.sound.add('nonbattle_music', {
+            volume: 0.5,
+            loop: true
+        });
+        this.backgroundMusic.play();
+    }
     }
 
     createButton(x, y, text, width, height, callback) {
@@ -134,4 +144,20 @@ export default class TutorialScene extends Phaser.Scene {
                 callback();
             });
     }
+// Called when scene is shutting down
+shutdown() {
+    console.log('TutorialScene shutdown called');
+    
+    // Kill all running tweens
+    this.tweens.killAll();
+    
+    // Only stop the music if we're not going back to the menu
+    // This prevents music interruption when switching between menu and tutorial
+    const music = this.sound.get('nonbattle_music');
+    if (music && this.scene.next !== 'MenuScene') {
+        music.stop();
+    }
+    
+    console.log('TutorialScene shutdown complete');
+}
 }

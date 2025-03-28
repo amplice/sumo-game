@@ -6,21 +6,21 @@
 const gameConfig = {
     // Game Area
     ring: {
-        radius: 300,     // Radius of the ring in pixels
+        radius: 280,     // Radius of the ring in pixels
         color: 0xCCCCCC, // Ring color (light gray)
-        borderWidth: 4,  // Border width in pixels
+        borderWidth: 0.1,  // Border width in pixels
         borderColor: 0x000000, // Border color (black)
     },
 
     // Player Configuration
     player: {
-        moveSpeed: 220,                // Base movement speed in pixels per second
+        moveSpeed: 180,                // Base movement speed in pixels per second
         diagonalSpeedModifier: 0.707,  // Speed modifier when moving diagonally (√2/2)
-        spriteScale: 2.5,                // Scale factor for player sprites
-        size: 20,                      // Player radius in pixels
+        spriteScale: 2,                // Scale factor for player sprites
+        size: 17,                      // Player radius in pixels
         hitboxSize: 20,                // Physics hitbox radius (slightly larger than visual)
-        aiSpeed: 220,                  // AI player speed (slightly slower than player)
-        outOfBoundsMargin: 15,         // Distance from ring edge to count as out-of-bounds
+        aiSpeed: 180,                  // AI player speed (slightly slower than player)
+        outOfBoundsMargin: 0,         // Distance from ring edge to count as out-of-bounds
         indicator: {
             size: 0,                  // Distance from center to indicator
             triangleShape: [           // Triangle indicator shape [x1,y1, x2,y2, x3,y3]
@@ -39,7 +39,7 @@ const gameConfig = {
     // Push Action
     push: {
         cooldown: 350,                 // Push cooldown in ms
-        range: 80,                     // Push detection range in pixels
+        range: 70,                     // Push detection range in pixels
         width: 40,                     // Push area width in pixels
         distance: 100,                 // How far target is pushed in pixels
         counterPushDistance: 200,      // Extra push distance when target is countering

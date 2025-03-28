@@ -17,12 +17,6 @@ export default class TestScene extends Phaser.Scene {
             const frames = atlas.getFrameNames();
             console.log("Available frames:", frames);
             
-            // Check for specific push frames
-            const pushFrames = ['down_push_0', 'right_push_0', 'up_push_0', 'down-right_push_0', 'up-right_push_0'];
-            console.log("Push frames exist:", pushFrames.map(frame => ({
-                frame,
-                exists: frames.includes(frame)
-            })));
         });
     }
 
@@ -74,8 +68,22 @@ export default class TestScene extends Phaser.Scene {
                 sprite.play(`${dir}_push`);
             });
             
+            // Add button to play throw animation
+            const throwButton = this.add.text(x, startY + 120, 'Play Throw', {
+                fontSize: '14px',
+                fill: '#FFFFFF',
+                backgroundColor: '#AA5500',
+                padding: { x: 10, y: 5 }
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            
+            throwButton.on('pointerup', () => {
+                console.log(`Playing ${dir}_throw animation`);
+                sprite.play(`${dir}_throw`);
+                
+            });
+            
             // Add button to play walk animation
-            const walkButton = this.add.text(x, startY + 120, 'Play Walk', {
+            const walkButton = this.add.text(x, startY + 160, 'Play Walk', {
                 fontSize: '14px',
                 fill: '#FFFFFF',
                 backgroundColor: '#00AA00',
@@ -88,7 +96,7 @@ export default class TestScene extends Phaser.Scene {
             });
             
             // Add button to reset to idle
-            const idleButton = this.add.text(x, startY + 160, 'Reset Idle', {
+            const idleButton = this.add.text(x, startY + 200, 'Reset Idle', {
                 fontSize: '14px',
                 fill: '#FFFFFF',
                 backgroundColor: '#AA0000',
@@ -120,6 +128,21 @@ export default class TestScene extends Phaser.Scene {
             });
         });
         
+        // Add button to play all throw animations
+        const playAllThrowsButton = this.add.text(1024/2, 550, 'Play All Throw Animations', {
+            fontSize: '18px',
+            fill: '#FFFFFF',
+            backgroundColor: '#AA8800',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        
+        playAllThrowsButton.on('pointerup', () => {
+            this.sprites.forEach(({ sprite, direction }) => {
+                console.log(`Playing ${direction}_throw animation on all sprites`);
+                sprite.play(`${direction}_throw`);
+            });
+        });
+        
         // Add a back button
         const backButton = this.add.text(1024/2, 600, 'Back to Menu', {
             fontSize: '18px',
@@ -137,7 +160,7 @@ export default class TestScene extends Phaser.Scene {
             sprite.on('animationcomplete', (anim) => {
                 console.log(`Animation ${anim.key} completed`);
                 // Return to idle
-                if (anim.key.includes('push')) {
+                if (anim.key.includes('push') || anim.key.includes('throw')) {
                     sprite.setTexture('sumo_sprites', `${direction}_idle`);
                 }
             });
@@ -176,6 +199,18 @@ export default class TestScene extends Phaser.Scene {
                 frameRate: 12,
                 repeat: 0
             });
+            
+            // Throw animations
+            this.anims.create({
+                key: `${dir}_throw`,
+                frames: [
+                    { key: 'sumo_sprites', frame: `${dir}_throw_0` },
+                    { key: 'sumo_sprites', frame: `${dir}_throw_1` },
+                    { key: 'sumo_sprites', frame: `${dir}_throw_2` }
+                ],
+                frameRate: 12, // Slower frame rate to make it more visible
+                repeat: 0
+            });
         });
         
         // Log all created animations
@@ -183,6 +218,29 @@ export default class TestScene extends Phaser.Scene {
         directions.forEach(dir => {
             console.log(`Animation ${dir}_push exists: ${this.anims.exists(`${dir}_push`)}`);
             console.log(`Animation ${dir}_walk exists: ${this.anims.exists(`${dir}_walk`)}`);
+            console.log(`Animation ${dir}_throw exists: ${this.anims.exists(`${dir}_throw`)}`);
+            
         });
     }
+    // Add this to the TestScene class
+shutdown() {
+    console.log('TestScene shutdown called');
+    
+    // Kill all running tweens
+    this.tweens.killAll();
+    
+    // Stop all animations
+    this.children.list.forEach(child => {
+        if (child.anims) {
+            child.anims.stop();
+        }
+    });
+    
+    // Explicitly destroy all sprites and graphics
+    this.sprites.forEach(({ sprite }) => {
+        sprite.destroy();
+    });
+    
+    this.sprites = [];
 }
+}   

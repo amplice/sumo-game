@@ -1,4 +1,5 @@
 import gameConfig from '../config/gameConfig';
+import musicManager from '../config/musicManager';
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
@@ -18,19 +19,30 @@ export default class MenuScene extends Phaser.Scene {
         if (!this.textures.exists('sumo_sprites')) {
             this.load.atlas('sumo_sprites', 'assets/sprites/sumo_sprites.png', 'assets/sprites/sumo_atlas.json');
         }
+        
+        // Load the same background image used in matches
+        if (!this.textures.exists('ring_background')) {
+            this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
+        }
+        this.load.audio('nonbattle_music', 'assets/audio/nonbattle_music.mp3');
     }
 
     create() {
         console.log('MenuScene create called');
         
-        // Create a darker background for better contrast
-        this.add.rectangle(0, 0, 1024, 768, 0x222222)
-            .setOrigin(0, 0);
+        // Add the same background image as used in matches
+        const backgroundImage = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'ring_background');
+        
+        // Set the background image to cover the whole game area
+        const scaleX = this.cameras.main.width / backgroundImage.width;
+        const scaleY = this.cameras.main.height / backgroundImage.height;
+        const scale = Math.max(scaleX, scaleY);
+        backgroundImage.setScale(scale);
             
-        // Create the ring background - moved down to not block title
-        const ringRadius = gameConfig.ring.radius - 20;
-        const ring = this.add.circle(1024/2, 400, ringRadius, gameConfig.ring.color);
-        ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
+        // // Create the ring circle over the background
+        // const ringRadius = gameConfig.ring.radius - 20;
+        // const ring = this.add.circle(1024/2, 400, ringRadius, gameConfig.ring.color, 0.2);
+        // ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
 
         // Add sumo sprites to the menu for visual preview
         const blueSumo = this.add.sprite(1024/2 - 100, 185, 'sumo_sprites', 'down_idle')
@@ -102,31 +114,36 @@ export default class MenuScene extends Phaser.Scene {
             this.safeStartScene('TestScene');
         });
         
+        musicManager.playMusic(this, 'nonbattle_music');
+    
+    this.initialized = true;
+    console.log('MenuScene create completed');
         this.initialized = true;
         console.log('MenuScene create completed');
     }
     
-    safeStartScene(sceneKey, data = {}) {
-        console.log(`Safely starting scene: ${sceneKey}`);
-        
-        // Cancel any active tweens
-        this.tweens.killAll();
-        
-        // Remove any temporary input listeners
-        this.input.keyboard.removeAllKeys(true);
-        
-        // Disable all interactive elements to prevent multiple clicks
-        this.children.list.forEach(child => {
-            if (child.input && child.input.enabled) {
-                child.disableInteractive();
-            }
-        });
-        
-        // Short delay before transition to ensure cleanup
-        this.time.delayedCall(50, () => {
-            this.scene.start(sceneKey, data);
-        });
-    }
+// Update the safeStartScene method in MenuScene.js
+safeStartScene(sceneKey, data = {}) {
+    console.log(`Safely starting scene: ${sceneKey}`);
+    
+    // Cancel any active tweens
+    this.tweens.killAll();
+    
+    // Remove any temporary input listeners
+    this.input.keyboard.removeAllKeys(true);
+    
+    // Disable all interactive elements to prevent multiple clicks
+    this.children.list.forEach(child => {
+        if (child.input && child.input.enabled) {
+            child.disableInteractive();
+        }
+    });
+    
+    // Short delay before transition to ensure cleanup
+    this.time.delayedCall(50, () => {
+        this.scene.start(sceneKey, data);
+    });
+}
 
     createButton(x, y, text, width, height, callback) {
         const buttonConfig = gameConfig.ui.buttons;
@@ -234,7 +251,7 @@ export default class MenuScene extends Phaser.Scene {
         // Clear references to buttons to avoid memory leaks
         this.difficultyButtons = {};
         this.singlePlayerButton = null;
-        
+
         console.log('MenuScene shutdown complete');
     }
 }

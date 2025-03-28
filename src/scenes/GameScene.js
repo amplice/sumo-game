@@ -2,6 +2,8 @@
 import Player from '../player';
 import gameConfig from '../config/gameConfig';
 import AIPlayer from '../ai/AIPlayer';
+import musicManager from '../config/musicManager';
+
 
 export default class GameScene extends Phaser.Scene {
     constructor() {
@@ -39,6 +41,11 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 40 
         });
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
+            // Load sound effects
+    this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
+    this.load.audio('push_hit', 'assets/audio/push_hit.mp3');
+        // Load the battle music
+        this.load.audio('battle_music', 'assets/audio/battle_music.mp3');
         
         // Log when atlas is loaded
         this.load.on('complete', () => {
@@ -63,7 +70,7 @@ export default class GameScene extends Phaser.Scene {
 
         // Create the ring (circular boundary)
         this.ringRadius = gameConfig.ring.radius;
-        this.ringCenter = { x: 1024/2, y: 768/2 };
+        this.ringCenter = { x: 1024/2, y: 350 };
 
         // The ring circle can now have transparent fill since we have a background image
         const ring = this.add.circle(
@@ -71,7 +78,7 @@ export default class GameScene extends Phaser.Scene {
             this.ringCenter.y, 
             this.ringRadius, 
             gameConfig.ring.color,
-            0.2  // More transparent fill
+            0  // More transparent fill
         );
         ring.setStrokeStyle(
             gameConfig.ring.borderWidth, 
@@ -120,7 +127,7 @@ export default class GameScene extends Phaser.Scene {
                 gameConfig.ui.fonts.small
             );
         }
-        
+        musicManager.playMusic(this, 'battle_music');
         this.initialized = true;
         this.roundEnded = false;
         
@@ -416,6 +423,127 @@ export default class GameScene extends Phaser.Scene {
             frameRate: 12,
             repeat: 0
         });
+                // Create throw animations for all directions
+        // Down (South) throw animation
+        this.anims.create({
+            key: 'down_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down_throw_0' },
+                { key: 'sumo_sprites', frame: 'down_throw_1' },
+                { key: 'sumo_sprites', frame: 'down_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Right (East) throw animation
+        this.anims.create({
+            key: 'right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'right_throw_0' },
+                { key: 'sumo_sprites', frame: 'right_throw_1' },
+                { key: 'sumo_sprites', frame: 'right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Up (North) throw animation
+        this.anims.create({
+            key: 'up_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up_throw_0' },
+                { key: 'sumo_sprites', frame: 'up_throw_1' },
+                { key: 'sumo_sprites', frame: 'up_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Down-right (Southeast) throw animation
+        this.anims.create({
+            key: 'down-right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down-right_throw_0' },
+                { key: 'sumo_sprites', frame: 'down-right_throw_1' },
+                { key: 'sumo_sprites', frame: 'down-right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Up-right (Northeast) throw animation
+        this.anims.create({
+            key: 'up-right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up-right_throw_0' },
+                { key: 'sumo_sprites', frame: 'up-right_throw_1' },
+                { key: 'sumo_sprites', frame: 'up-right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Create throw animations for all directions
+        // Down (South) throw animation
+        this.anims.create({
+            key: 'down_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down_throw_0' },
+                { key: 'sumo_sprites', frame: 'down_throw_1' },
+                { key: 'sumo_sprites', frame: 'down_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Right (East) throw animation
+        this.anims.create({
+            key: 'right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'right_throw_0' },
+                { key: 'sumo_sprites', frame: 'right_throw_1' },
+                { key: 'sumo_sprites', frame: 'right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Up (North) throw animation
+        this.anims.create({
+            key: 'up_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up_throw_0' },
+                { key: 'sumo_sprites', frame: 'up_throw_1' },
+                { key: 'sumo_sprites', frame: 'up_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Down-right (Southeast) throw animation
+        this.anims.create({
+            key: 'down-right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'down-right_throw_0' },
+                { key: 'sumo_sprites', frame: 'down-right_throw_1' },
+                { key: 'sumo_sprites', frame: 'down-right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
+        
+        // Up-right (Northeast) throw animation
+        this.anims.create({
+            key: 'up-right_throw',
+            frames: [
+                { key: 'sumo_sprites', frame: 'up-right_throw_0' },
+                { key: 'sumo_sprites', frame: 'up-right_throw_1' },
+                { key: 'sumo_sprites', frame: 'up-right_throw_2' }
+            ],
+            frameRate: 8,
+            repeat: 0
+        });
     }
 
     update(time, delta) {
@@ -618,6 +746,9 @@ export default class GameScene extends Phaser.Scene {
     // Function to attempt a push
     attemptPush(pusher, target) {
         if (!pusher || !target) return;
+
+            // Play the push sound whenever a push is attempted
+    this.sound.play('push_sound');
         
         // Calculate push direction vector based on pusher's facing direction
         let pushDirX = 0;
@@ -716,6 +847,8 @@ export default class GameScene extends Phaser.Scene {
         const hitSuccessful = (projection > 0) && (projection <= pushConfig.range) && (perpDist <= pushConfig.width/2);
         
         if (hitSuccessful && target) {
+                    // Play the push hit sound when a push successfully lands
+        this.sound.play('push_hit');
             // If target is in counter active state, reverse the push!
             if (target.isCounterActive) {
                 // Counter the push - reverse direction and push the original pusher back
@@ -1181,6 +1314,12 @@ export default class GameScene extends Phaser.Scene {
         this.returnButton.on('pointerup', () => {
             console.log('Return to Menu button pressed. Cleaning up...');
             
+            // Stop the battle music
+            if (this.sound.get('battle_music')) {
+                console.log('Stopping battle music before returning to menu');
+                this.sound.get('battle_music').stop();
+            }
+            
             // Immediately prevent further interactions
             this.returnButton.disableInteractive();
             
@@ -1338,7 +1477,10 @@ export default class GameScene extends Phaser.Scene {
         this.player1 = null;
         this.player2 = null;
         this.ai = null;
-        
+            // Stop the music when leaving the scene
+    if (this.backgroundMusic) {
+        this.backgroundMusic.stop();
+    }
         console.log('GameScene shutdown complete');
     }
 }
