@@ -7,6 +7,7 @@ class MusicManager {
     constructor() {
         this.currentMusic = null;
         this.currentKey = null;
+        this.scene = null;
     }
     
     /**
@@ -17,6 +18,9 @@ class MusicManager {
      */
     playMusic(scene, key, config = {}) {
         console.log(`MusicManager: Request to play music ${key}`);
+        
+        // Store the current scene for mute controls
+        this.scene = scene;
         
         // Default configuration
         const defaultConfig = {
@@ -61,6 +65,30 @@ class MusicManager {
      */
     isPlaying(key) {
         return this.currentKey === key && this.currentMusic && this.currentMusic.isPlaying;
+    }
+    
+    /**
+     * Toggle mute state for all sound
+     * @returns {boolean} The new mute state
+     */
+    toggleMute() {
+        const newMuteState = !this.scene.sound.mute;
+        console.log(`MusicManager: Setting mute to ${newMuteState}`);
+        
+        // If we have a valid scene, mute all sound
+        if (this.scene) {
+            this.scene.sound.mute = newMuteState;
+        }
+        
+        return newMuteState;
+    }
+    
+    /**
+     * Set the current scene for the music manager
+     * @param {Phaser.Scene} scene - The current scene
+     */
+    setScene(scene) {
+        this.scene = scene;
     }
 }
 

@@ -47,6 +47,11 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 32 
         });
 
+        this.load.spritesheet('throw_end', 'assets/sprites/throw_end_sprites.png', { 
+            frameWidth: 64, 
+            frameHeight: 64 
+        });
+
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
             // Load sound effects
     this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
@@ -134,7 +139,14 @@ export default class GameScene extends Phaser.Scene {
                 gameConfig.ui.fonts.small
             );
         }
-        musicManager.playMusic(this, 'battle_music');
+// Set current scene in music manager
+musicManager.setScene(this);
+
+// Play battle music
+musicManager.playMusic(this, 'battle_music');
+
+// Create mute button
+this.createMuteButton();
         this.initialized = true;
         this.roundEnded = false;
         
@@ -209,6 +221,43 @@ export default class GameScene extends Phaser.Scene {
                 this.scene.start('MenuScene');
             });
         });
+    }
+    createMuteButton() {
+        // Get the current mute state
+        const isMuted = this.sound.mute;
+        
+        // Set text based on current state
+        const buttonText = isMuted ? '🔇' : '🔊';
+        
+        // Position in top-right corner
+        const x = this.cameras.main.width - 50;
+        const y = 30;
+        
+        // Create or update the button
+        if (this.muteButton) {
+            this.muteButton.setText(buttonText);
+        } else {
+            this.muteButton = this.add.text(x, y, buttonText, {
+                fontSize: '28px',
+                fontStyle: 'bold',
+                backgroundColor: '#333',
+                padding: { x: 10, y: 5 },
+                fixedWidth: 48,
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            this.muteButton.setInteractive({ useHandCursor: true });
+            
+            // Handle click event
+            this.muteButton.on('pointerup', () => {
+                // Use our music manager to toggle mute
+                musicManager.setScene(this);
+                const isMuted = musicManager.toggleMute();
+                
+                // Update button text
+                this.muteButton.setText(isMuted ? '🔇' : '🔊');
+            });
+        }
     }
     
     cleanupPlayers() {
@@ -435,6 +484,13 @@ export default class GameScene extends Phaser.Scene {
         this.anims.create({
             key: 'throw_attack_anim',
             frames: this.anims.generateFrameNumbers('throw_attack', { start: 0, end: 3 }),
+            frameRate: 12,
+            repeat: 0
+        });
+
+        this.anims.create({
+            key: 'throw_end_anim',
+            frames: this.anims.generateFrameNumbers('throw_end', { start: 0, end: 3 }),
             frameRate: 12,
             repeat: 0
         });

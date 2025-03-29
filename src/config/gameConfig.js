@@ -74,7 +74,7 @@ const gameConfig = {
         },
         visual: {
             color: 0xFF8800,           // Throw cone fill color (orange)
-            alpha: 0.5,                // Throw cone transparency
+            alpha: 0,                // Throw cone transparency
             borderColor: 0xFF5500,     // Throw cone border color
             borderWidth: 2,            // Throw cone border width
             fadeOutDuration: 600,      // Cone fade out duration in ms

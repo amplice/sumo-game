@@ -462,6 +462,27 @@ throwDustEffect.once('animationcomplete', () => {
             
             // Get direction vector
             const dirVector = directionVectors[this.direction];
+
+            // Calculate position for throw end effect - a bit further out than the player
+const effectDistance = 60; // Distance from player center
+const effectX = this.x + (dirVector.x * effectDistance);
+const effectY = this.y + (dirVector.y * effectDistance);
+// Calculate angle based on direction
+const angle = Math.atan2(dirVector.y, dirVector.x) * (180 / Math.PI);
+
+// Create the throw end effect sprite
+const throwEndEffect = this.scene.add.sprite(effectX, effectY, 'throw_end');
+throwEndEffect.setOrigin(0.5, 0.5);
+throwEndEffect.angle = angle; // Rotate to match throw direction
+throwEndEffect.setScale(1.4); // Make it a bit larger
+
+// Play the throw end animation
+throwEndEffect.play('throw_end_anim');
+
+// Remove the sprite when animation completes
+throwEndEffect.once('animationcomplete', () => {
+    throwEndEffect.destroy();
+});
             
             // Create a cone graphic for throw area
             if (this.throwCone) {
@@ -597,7 +618,7 @@ throwDustEffect.once('animationcomplete', () => {
             this.throwWindupCircle.setScale(progress * 1.5);
             
             // Start playing frames 1-2 at 72.2% of windup (for 12fps)
-            if (progress > 0.722 && !this.sprite.anims.isPlaying) {
+            if (progress > 0.75 && !this.sprite.anims.isPlaying) {
                 this.playThrowAnimation();
             }
         }

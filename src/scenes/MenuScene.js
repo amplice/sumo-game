@@ -114,7 +114,14 @@ export default class MenuScene extends Phaser.Scene {
             this.safeStartScene('TestScene');
         });
         
+        // Set current scene in music manager
+        musicManager.setScene(this);
+        
+        // Play background music
         musicManager.playMusic(this, 'nonbattle_music');
+        
+        // Create mute button
+        this.createMuteButton();
     
     this.initialized = true;
     console.log('MenuScene create completed');
@@ -233,7 +240,46 @@ safeStartScene(sceneKey, data = {}) {
     formatDifficulty(difficulty) {
         return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     }
-    
+    /**
+     * Creates a mute button in the top-right corner
+     */
+    createMuteButton() {
+        // Get the current mute state
+        const isMuted = this.sound.mute;
+        
+        // Set text based on current state
+        const buttonText = isMuted ? '🔇' : '🔊';
+        
+        // Position in top-right corner
+        const x = this.cameras.main.width - 50;
+        const y = 30;
+        
+        // Create or update the button
+        if (this.muteButton) {
+            this.muteButton.setText(buttonText);
+        } else {
+            this.muteButton = this.add.text(x, y, buttonText, {
+                fontSize: '28px',
+                fontStyle: 'bold',
+                backgroundColor: '#333',
+                padding: { x: 10, y: 5 },
+                fixedWidth: 48,
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            this.muteButton.setInteractive({ useHandCursor: true });
+            
+            // Handle click event
+            this.muteButton.on('pointerup', () => {
+                // Use our music manager to toggle mute
+                musicManager.setScene(this);
+                const isMuted = musicManager.toggleMute();
+                
+                // Update button text
+                this.muteButton.setText(isMuted ? '🔇' : '🔊');
+            });
+        }
+    }
     // Called when scene is shutting down
     shutdown() {
         console.log('MenuScene shutdown called');
