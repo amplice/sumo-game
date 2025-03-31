@@ -364,6 +364,16 @@ throwDustEffect.once('animationcomplete', () => {
             // Show counter windup visual
             this.counterWindupCircle.setVisible(true);
             this.counterWindupCircle.setAlpha(counterVisual.windupCircleAlpha);
+
+            // Add counter windup effect at the player's feet
+const counterWindupEffect = this.scene.add.sprite(this.x, this.y+5 , 'counter_windup');
+counterWindupEffect.setOrigin(0.5, 0);
+counterWindupEffect.play('counter_windup_anim');
+
+// Remove the sprite when animation completes
+counterWindupEffect.once('animationcomplete', () => {
+    counterWindupEffect.destroy();
+});
             
             // Create a pulsing effect around the player during counter windup
             const pulseEffect = this.scene.add.circle(
@@ -468,13 +478,13 @@ const effectDistance = 60; // Distance from player center
 const effectX = this.x + (dirVector.x * effectDistance);
 const effectY = this.y + (dirVector.y * effectDistance);
 // Calculate angle based on direction
-const angle = Math.atan2(dirVector.y, dirVector.x) * (180 / Math.PI);
+const angle = Math.atan2(dirVector.y, dirVector.x) * (180 / Math.PI); // Add 90 degrees because sprite is north-facing by default
 
 // Create the throw end effect sprite
 const throwEndEffect = this.scene.add.sprite(effectX, effectY, 'throw_end');
 throwEndEffect.setOrigin(0.5, 0.5);
 throwEndEffect.angle = angle; // Rotate to match throw direction
-throwEndEffect.setScale(1.4); // Make it a bit larger
+throwEndEffect.setScale(1.3); // Make it a bit larger
 
 // Play the throw end animation
 throwEndEffect.play('throw_end_anim');
@@ -618,7 +628,7 @@ throwEndEffect.once('animationcomplete', () => {
             this.throwWindupCircle.setScale(progress * 1.5);
             
             // Start playing frames 1-2 at 72.2% of windup (for 12fps)
-            if (progress > 0.75 && !this.sprite.anims.isPlaying) {
+            if (progress > 0.74 && !this.sprite.anims.isPlaying) {
                 this.playThrowAnimation();
             }
         }

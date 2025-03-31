@@ -52,6 +52,11 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 64 
         });
 
+        this.load.spritesheet('counter_windup', 'assets/sprites/counter_windup_sprites.png', { 
+            frameWidth: 64, 
+            frameHeight: 32 
+        });
+
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
             // Load sound effects
     this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
@@ -554,6 +559,14 @@ this.createMuteButton();
             frameRate: 12,
             repeat: 0
         });
+
+// Create counter windup animation
+this.anims.create({
+    key: 'counter_windup_anim',
+    frames: this.anims.generateFrameNumbers('counter_windup', { start: 0, end: 3 }),
+    frameRate: 13.33,
+    repeat: 0
+});
         
     }
 

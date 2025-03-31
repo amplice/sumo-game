@@ -65,46 +65,46 @@ const gameConfig = {
     // Throw Action
     throw: {
         windupDuration: 600,          // Throw windup duration in ms
-        range: 110,                    // Maximum throw range in pixels
-        angle: 45,                     // Throw cone angle in degrees
+        range: 100,                    // Maximum throw range in pixels
+        angle: 33,                     // Throw cone angle in degrees
         coneSize: {                    // Cone visual parameters
-            length: 100,               // Length of the cone
-            halfAngleTangent: 0.4142,  // Tangent of half the cone angle (tan(22.5°))
+            length: 95,               // Length of the cone
+            halfAngleTangent: 0.28,  // Tangent of half the cone angle (tan(22.5°))
             steps: 10,                 // Number of steps to draw the cone curve
         },
         visual: {
-            color: 0xFF8800,           // Throw cone fill color (orange)
-            alpha: 0,                // Throw cone transparency
-            borderColor: 0xFF5500,     // Throw cone border color
-            borderWidth: 2,            // Throw cone border width
-            fadeOutDuration: 600,      // Cone fade out duration in ms
+            color: 0xcccccc,           // Throw cone fill color (orange)
+            alpha: 0.1,                // Throw cone transparency
+            borderColor: 0xcccccc,     // Throw cone border color
+            borderWidth: 0,            // Throw cone border width
+            fadeOutDuration: 200,      // Cone fade out duration in ms
             windupCircleSize: 15,      // Windup circle size
-            windupCircleAlpha: 0.3,    // Windup circle transparency
+            windupCircleAlpha: 0,    // Windup circle transparency
         },
         feedback: {
             flashDuration: 100,        // Duration of thrower's flash
             flashAlpha: 0.5,           // Alpha of thrower's flash
             spinDuration: 500,         // Duration of target's spin animation
             lineColor: 0xFF8800,       // Color of the line effect between players
-            lineWidth: 4,              // Width of the line effect
+            lineWidth: 0,              // Width of the line effect
             lineFadeDuration: 400,     // Line fade out duration in ms
         }
     },
 
     // Counter Action
     counter: {
-        windupDuration: 250,           // Counter windup duration in ms
-        activeDuration: 250,           // Counter active duration in ms
+        windupDuration: 300,           // Counter windup duration in ms
+        activeDuration: 300,           // Counter active duration in ms
         visual: {
             windupCircleSize: 15,      // Size of windup circle
             windupCircleColor: 0xFFFFFF, // Initial color of windup circle (white)
-            windupCircleAlpha: 0.3,    // Windup circle transparency
+            windupCircleAlpha: 0,    // Windup circle transparency
             activeCircleSize: 20,      // Size of active counter circle
             activeCircleColor: 0xFFFF00, // Active counter circle color (yellow)
             activeCircleAlpha: 0.4,    // Active counter circle transparency
             pulseSize: 20,             // Size of the pulse effect
             pulseColor: 0xFFFFFF,      // Pulse effect color (white)
-            pulseAlpha: 0.6,           // Pulse effect transparency
+            pulseAlpha: 0,           // Pulse effect transparency
             pulseScale: 1.5,           // How much pulse expands
         },
         feedback: {
@@ -157,25 +157,25 @@ ai: {
         throwChanceNearEdge: 0.2,  // Chance to throw when opponent near edge
         throwChanceNormal: 0.3,    // Normal throw chance
         counterChance: 0.2,        // Chance to use counter randomly
-        counterChanceVsThrow: 0.7, // Chance to counter when opponent is throwing
+        counterChanceVsThrow: 0.8, // Chance to counter when opponent is throwing
     },
     difficulties: {
         easy: {
-            reactionTime: 500,     // Ms delay before reacting
+            reactionTime: 400,     // Ms delay before reacting
             decisionQuality: 0.5,  // 0-1 chance of making optimal decision
             prediction: 0.2,       // 0-1 ability to predict player movements
             positionAccuracy: 0.3, // 0-1 positioning precision
             edgeAwareness: 0.4     // 0-1 awareness of ring boundaries
         },
         medium: {
-            reactionTime: 300,
+            reactionTime: 250,
             decisionQuality: 0.7,
             prediction: 0.5,
             positionAccuracy: 0.6,
             edgeAwareness: 0.7
         },
         hard: {
-            reactionTime: 150,
+            reactionTime: 100,
             decisionQuality: 0.9,
             prediction: 0.8,
             positionAccuracy: 0.9,
