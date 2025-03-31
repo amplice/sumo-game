@@ -51,35 +51,31 @@ export default class Player {
     setVelocity(x, y) {
         this.sprite.setVelocity(x, y);
         
-        // Only update animation if not currently playing a special animation (like push or throw)
-        if (this.sprite.anims.currentAnim && 
-            !this.sprite.anims.currentAnim.repeat && 
-            this.sprite.anims.isPlaying &&
-            (this.sprite.anims.currentAnim.key.includes('push') || this.sprite.anims.currentAnim.key.includes('throw'))) {
-            // Don't interrupt special animations
+        // Skip animation updates if we're in special states or playing special animations
+        if ((this.sprite.anims.currentAnim && 
+             !this.sprite.anims.currentAnim.repeat && 
+             this.sprite.anims.isPlaying &&
+             (this.sprite.anims.currentAnim.key.includes('push') || 
+              this.sprite.anims.currentAnim.key.includes('throw'))) || 
+            this.isThrowWindingUp || 
+            this.isCounterWindingUp) {
             return;
         }
         
-        // Don't update animation during throw windup - we want to keep the first frame visible
-        if (this.isThrowWindingUp) {
-            return;
-        }
-        
-        // Update animation based on movement
-        if (x === 0 && y === 0) {
-            // If not moving, play idle animation
-            this.playIdleAnimation();
-        } else {
-            // If moving, play walk animation for the current direction
+        // If not in a special state, update animation based on velocity
+        const isMoving = (x !== 0 || y !== 0);
+        if (isMoving) {
             this.playWalkAnimation();
+        } else {
+            this.playIdleAnimation();
         }
     }
     
     playIdleAnimation() {
-        // Skip if in throw windup - we want to keep the first frame visible
-        if (this.isThrowWindingUp) {
-            return;
-        }
+    // Skip if in counter windup or throw windup - we want to keep those frames visible
+    if (this.isThrowWindingUp || this.isCounterWindingUp) {
+        return;
+    }
         
         // Get base direction and flipping for idle
         const { baseDirection, flipX } = this.getMirroredDirection(this.direction, true);
@@ -117,8 +113,8 @@ export default class Player {
     }
     
     playWalkAnimation() {
-        // Skip if in throw windup - we want to keep the first frame visible
-        if (this.isThrowWindingUp) {
+        // Skip if in special states
+        if (this.isThrowWindingUp || this.isCounterWindingUp) {
             return;
         }
         
@@ -127,10 +123,10 @@ export default class Player {
         
         const animKey = `${baseDirection}_walk`;
         
-        if (this.sprite.anims.currentAnim?.key !== animKey || this.sprite.flipX !== flipX) {
-            this.sprite.play(animKey);
-            this.sprite.setFlipX(flipX);
-        }
+        // The key fix: don't check against current animation key, as it might be null 
+        // after animations are stopped
+        this.sprite.play(animKey, true);  // Use true to force animation restart
+        this.sprite.setFlipX(flipX);
     }
     
     playPushAnimation() {
@@ -245,19 +241,25 @@ export default class Player {
                 case 'up-left': this.directionAngle = 315; break;
             }
             
-            // Only update animation if not in throw windup
-            if (!this.isThrowWindingUp) {
-                // Update the sprite animation
+            // Get base direction and flipping
+            const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+            
+            // Handle different states
+            if (this.isThrowWindingUp) {
+                // If in throw windup, update the first frame of the throw animation
+                this.sprite.setFrame(`${baseDirection}_throw_0`);
+                this.sprite.setFlipX(flipX);
+            } else if (this.isCounterWindingUp) {
+                // If in counter windup, update to the counter windup frame
+                this.sprite.setFrame(`${baseDirection}_counter_windup`);
+                this.sprite.setFlipX(flipX);
+            } else {
+                // Normal movement or idle animations
                 if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
                     this.playIdleAnimation();
                 } else {
                     this.playWalkAnimation();
                 }
-            } else {
-                // If in throw windup, update the first frame of the throw animation
-                const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
-                this.sprite.setFrame(`${baseDirection}_throw_0`);
-                this.sprite.setFlipX(flipX);
             }
         }
     }
@@ -399,6 +401,16 @@ counterWindupEffect.once('animationcomplete', () => {
                     pulseEffect.destroy();
                 }
             });
+
+            // Get base direction and flipping for counter windup
+            const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+            
+            // Set the counter windup frame
+            this.sprite.anims.stop();
+            this.sprite.setFrame(`${baseDirection}_counter_windup`);
+            this.sprite.setFlipX(flipX);
+            
+            console.log("Counter windup started - showing frame:", `${baseDirection}_counter_windup`);
             
             return true;
         }
@@ -412,28 +424,40 @@ counterWindupEffect.once('animationcomplete', () => {
             this.counterWindupTimer = 0;
             this.canMove = true;
             this.counterWindupCircle.setVisible(false);
+            
+            // Stop any current animation first
+            this.sprite.anims.stop();
+            
+            // Set the correct animation based on current velocity
+            if (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0) {
+                this.playWalkAnimation();
+            } else {
+                this.playIdleAnimation();
+            }
         }
     }
-    
-    // Activate counter (called after windup completes)
-    activateCounter() {
-        if (this.isCounterWindingUp) {
-            this.isCounterWindingUp = false;
-            this.isCounterActive = true;
-            this.counterActiveTimer = 0;
-            this.canMove = false; // Still can't move during active counter
-            
-            // Ensure velocity is still zero when counter activates
-            this.setVelocity(0, 0);
-            
-            // Hide windup visual and show active visual
-            this.counterWindupCircle.setVisible(false);
-            this.counterActiveCircle.setVisible(true);
-            
-            return true;
-        }
-        return false;
+// Method 3: Activate Counter - Shows tinted idle frame during active counter
+activateCounter() {
+    if (this.isCounterWindingUp) {
+        this.isCounterWindingUp = false;
+        this.isCounterActive = true;
+        this.counterActiveTimer = 0;
+        this.canMove = false; // Still can't move during active counter
+        
+        // Ensure velocity is still zero when counter activates
+        this.setVelocity(0, 0);
+        
+        // Hide windup visual and show active visual
+        this.counterWindupCircle.setVisible(false);
+        this.counterActiveCircle.setVisible(true);
+        
+        // Reset to idle frame when counter becomes active
+        this.playIdleAnimation();
+        
+        return true;
     }
+    return false;
+}
     
     // End counter (called when active period ends)
     endCounter() {
@@ -442,6 +466,16 @@ counterWindupEffect.once('animationcomplete', () => {
             this.counterActiveTimer = 0;
             this.canMove = true;
             this.counterActiveCircle.setVisible(false);
+            
+            // Stop any current animation first
+            this.sprite.anims.stop();
+            
+            // Set the correct animation based on current velocity
+            if (this.sprite.body.velocity.x !== 0 || this.sprite.body.velocity.y !== 0) {
+                this.playWalkAnimation();
+            } else {
+                this.playIdleAnimation();
+            }
         }
     }
     
@@ -691,10 +725,10 @@ throwEndEffect.once('animationcomplete', () => {
             return;
         }
         
-        // Skip animation updates during throw windup
-        if (this.isThrowWindingUp) {
-            return;
-        }
+// Skip animation updates during throw windup or counter windup
+if (this.isThrowWindingUp || this.isCounterWindingUp) {
+    return;
+}
         
         // Update animation based on movement if no special animation is playing
         if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
