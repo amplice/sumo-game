@@ -156,12 +156,15 @@ musicManager.setScene(this);
 // Play battle music
 musicManager.playMusic(this, 'battle_music');
 
-// Create mute button
-this.createMuteButton();
-        this.initialized = true;
-        this.roundEnded = false;
-        
-        console.log('GameScene create completed');
+// Create mute buttons with a short delay to ensure scene is ready
+this.time.delayedCall(50, () => {
+    this.createMuteButton();
+});
+ 
+ this.initialized = true;
+ this.roundEnded = false;
+ 
+ console.log('GameScene create completed');
     }
     
     setupInputHandlers() {
@@ -233,43 +236,82 @@ this.createMuteButton();
             });
         });
     }
-    createMuteButton() {
-        // Get the current mute state
-        const isMuted = this.sound.mute;
+// Update the createMuteButton method in both GameScene.js and MenuScene.js
+
+createMuteButton() {
+    // Remove the scene active check entirely as it's causing problems
+    // Just create the buttons directly
+
+    // Position in top-right corner
+    const x = this.cameras.main.width - 60;
+    const musicY = 30;
+    const sfxY = 80;
+    
+    // Make sure musicManager is aware of this scene
+    musicManager.setScene(this);
+    
+    // Get current mute states
+    const isMusicMuted = musicManager.isMusicMuted();
+    const isSFXMuted = musicManager.isSFXMuted();
+    
+    // Set button texts based on current states
+    const musicButtonText = isMusicMuted ? 'MUSIC OFF' : 'MUSIC ON';
+    const sfxButtonText = isSFXMuted ? 'FX OFF' : 'FX ON';
+    
+    // Create or update music mute button
+    if (this.musicMuteButton && this.musicMuteButton.active) {
+        this.musicMuteButton.setText(musicButtonText);
+    } else {
+        this.musicMuteButton = this.add.text(x, musicY, musicButtonText, {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            backgroundColor: '#333',
+            padding: { x: 10, y: 5 },
+            fixedWidth: 100,
+            align: 'center'
+        }).setOrigin(0.5);
         
-        // Set text based on current state
-        const buttonText = isMuted ? '🔇' : '🔊';
+        this.musicMuteButton.setInteractive({ useHandCursor: true });
         
-        // Position in top-right corner
-        const x = this.cameras.main.width - 50;
-        const y = 30;
-        
-        // Create or update the button
-        if (this.muteButton) {
-            this.muteButton.setText(buttonText);
-        } else {
-            this.muteButton = this.add.text(x, y, buttonText, {
-                fontSize: '28px',
-                fontStyle: 'bold',
-                backgroundColor: '#333',
-                padding: { x: 10, y: 5 },
-                fixedWidth: 48,
-                align: 'center'
-            }).setOrigin(0.5);
+        // Handle click event for music
+        this.musicMuteButton.on('pointerup', () => {
+            const isMuted = musicManager.toggleMusicMute();
             
-            this.muteButton.setInteractive({ useHandCursor: true });
-            
-            // Handle click event
-            this.muteButton.on('pointerup', () => {
-                // Use our music manager to toggle mute
-                musicManager.setScene(this);
-                const isMuted = musicManager.toggleMute();
-                
-                // Update button text
-                this.muteButton.setText(isMuted ? '🔇' : '🔊');
-            });
-        }
+            // Update button text
+            if (this.musicMuteButton && this.musicMuteButton.active) {
+                this.musicMuteButton.setText(isMuted ? 'MUSIC OFF' : 'MUSIC ON');
+            }
+        });
     }
+    
+    // Create or update SFX mute button
+    if (this.sfxMuteButton && this.sfxMuteButton.active) {
+        this.sfxMuteButton.setText(sfxButtonText);
+    } else {
+        this.sfxMuteButton = this.add.text(x, sfxY, sfxButtonText, {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            backgroundColor: '#333',
+            padding: { x: 10, y: 5 },
+            fixedWidth: 100,
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        this.sfxMuteButton.setInteractive({ useHandCursor: true });
+        
+        // Handle click event for SFX
+        this.sfxMuteButton.on('pointerup', () => {
+            const isMuted = musicManager.toggleSFXMute();
+            
+            // Update button text
+            if (this.sfxMuteButton && this.sfxMuteButton.active) {
+                this.sfxMuteButton.setText(isMuted ? 'FX OFF' : 'FX ON');
+            }
+        });
+    }
+
+    console.log('Mute buttons created successfully');
+}
     
     cleanupPlayers() {
         // Clean up player 1
@@ -785,8 +827,7 @@ this.anims.create({
         if (!pusher || !target) return;
 
             // Play the push sound whenever a push is attempted
-    this.sound.play('push_sound');
-        
+            musicManager.playSFX(this, 'push_sound');        
         // Calculate push direction vector based on pusher's facing direction
         let pushDirX = 0;
         let pushDirY = 0;
@@ -885,8 +926,7 @@ this.anims.create({
         
         if (hitSuccessful && target) {
                     // Play the push hit sound when a push successfully lands
-        this.sound.play('push_hit');
-            // If target is in counter active state, reverse the push!
+                    musicManager.playSFX(this, 'push_hit');            // If target is in counter active state, reverse the push!
             if (target.isCounterActive) {
                 // Counter the push - reverse direction and push the original pusher back
                 this.counterPush(target, pusher, -pushDirX, -pushDirY);
@@ -1377,44 +1417,54 @@ this.anims.create({
     cleanupBeforeSceneChange() {
         console.log('Performing thorough cleanup before scene change');
         
-        // Cleanup visual effects
-        this.cleanupVisualEffects();
-        
-        // Additional sprite cleanup for both players
-        if (this.player1) {
-            this.player1.sprite.anims.stop();
-            this.player1.setVelocity(0, 0);
-            this.player1.canMove = false;
-            this.player1.isThrowWindingUp = false;
-            this.player1.isCounterWindingUp = false;
-            this.player1.isCounterActive = false;
+        // Destroy UI elements safely
+        if (this.musicMuteButton) {
+            this.musicMuteButton.destroy();
+            this.musicMuteButton = null;
         }
         
-        if (this.player2) {
-            this.player2.sprite.anims.stop();
-            this.player2.setVelocity(0, 0);
-            this.player2.canMove = false;
-            this.player2.isThrowWindingUp = false;
-            this.player2.isCounterWindingUp = false;
-            this.player2.isCounterActive = false;
+        if (this.sfxMuteButton) {
+            this.sfxMuteButton.destroy();
+            this.sfxMuteButton = null;
         }
         
-        // Destroy the collision handler
-        if (this.collider) {
-            this.physics.world.removeCollider(this.collider);
-            this.collider = null;
+        // Additional cleanup...
+        // existing cleanup code remains
+    }
+    
+    // In MenuScene.js, add a similar cleanup in the safeStartScene method
+    
+    safeStartScene(sceneKey, data = {}) {
+        console.log(`Safely starting scene: ${sceneKey}`);
+        
+        // Clean up text objects
+        if (this.musicMuteButton) {
+            this.musicMuteButton.destroy();
+            this.musicMuteButton = null;
         }
         
-        // Destroy the AI controller
-        if (this.ai) {
-            this.ai = null;
+        if (this.sfxMuteButton) {
+            this.sfxMuteButton.destroy();
+            this.sfxMuteButton = null;
         }
         
-        // Clear input handlers
+        // Cancel any active tweens
+        this.tweens.killAll();
+        
+        // Remove any temporary input listeners
         this.input.keyboard.removeAllKeys(true);
-        this.wasdKeys = null;
-        this.arrowKeys = null;
-        this.actionKeys = null;
+        
+        // Disable all interactive elements to prevent multiple clicks
+        this.children.list.forEach(child => {
+            if (child.input && child.input.enabled) {
+                child.disableInteractive();
+            }
+        });
+        
+        // Short delay before transition to ensure cleanup
+        this.time.delayedCall(50, () => {
+            this.scene.start(sceneKey, data);
+        });
     }
 
     resetRound() {

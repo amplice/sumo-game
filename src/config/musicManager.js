@@ -1,4 +1,4 @@
-// Create a new file src/utils/musicManager.js
+// Fix for src/config/musicManager.js
 
 /**
  * Global music manager to handle background music across scenes
@@ -8,6 +8,8 @@ class MusicManager {
         this.currentMusic = null;
         this.currentKey = null;
         this.scene = null;
+        this.musicMuted = false;
+        this.sfxMuted = false;
     }
     
     /**
@@ -37,6 +39,9 @@ class MusicManager {
         // Create new music instance
         this.currentMusic = scene.sound.add(key, finalConfig);
         this.currentKey = key;
+        
+        // Apply current mute state
+        this.currentMusic.setMute(this.musicMuted);
         
         // Play the music
         this.currentMusic.play();
@@ -68,6 +73,82 @@ class MusicManager {
     }
     
     /**
+     * Set the current scene for the music manager
+     * @param {Phaser.Scene} scene - The current scene
+     */
+    setScene(scene) {
+        this.scene = scene;
+    }
+    
+    /**
+     * Toggle mute state specifically for music
+     * @returns {boolean} The new music mute state
+     */
+    toggleMusicMute() {
+        this.musicMuted = !this.musicMuted;
+        console.log(`MusicManager: Setting music mute to ${this.musicMuted}`);
+        
+        // Apply to current music if it exists
+        if (this.currentMusic) {
+            this.currentMusic.setMute(this.musicMuted);
+        }
+        
+        return this.musicMuted;
+    }
+    
+    /**
+     * Toggle mute state for sound effects
+     * @returns {boolean} The new SFX mute state
+     */
+    toggleSFXMute() {
+        this.sfxMuted = !this.sfxMuted;
+        console.log(`MusicManager: Setting SFX mute to ${this.sfxMuted}`);
+        
+        // If we have a valid scene, set the mute state for all non-music sounds
+        if (this.scene) {
+            // For existing sounds, we need to update them individually (except music)
+            this.scene.sound.sounds.forEach(sound => {
+                // Skip the current music when muting sfx
+                if (sound !== this.currentMusic) {
+                    sound.setMute(this.sfxMuted);
+                }
+            });
+        }
+        
+        return this.sfxMuted;
+    }
+    
+    /**
+     * Get current mute state for music
+     * @returns {boolean} True if music is muted
+     */
+    isMusicMuted() {
+        return this.musicMuted;
+    }
+    
+    /**
+     * Get current mute state for sound effects
+     * @returns {boolean} True if SFX are muted
+     */
+    isSFXMuted() {
+        return this.sfxMuted;
+    }
+    
+    /**
+     * Play a sound effect with the current SFX mute state applied
+     * @param {Phaser.Scene} scene - The scene to play the sound in
+     * @param {string} key - The sound key
+     * @param {object} config - Configuration for the sound
+     * @returns {Phaser.Sound.BaseSound} The sound object
+     */
+    playSFX(scene, key, config = {}) {
+        const sound = scene.sound.add(key, config);
+        sound.setMute(this.sfxMuted);
+        sound.play();
+        return sound;
+    }
+    
+    /**
      * Toggle mute state for all sound
      * @returns {boolean} The new mute state
      */
@@ -81,14 +162,6 @@ class MusicManager {
         }
         
         return newMuteState;
-    }
-    
-    /**
-     * Set the current scene for the music manager
-     * @param {Phaser.Scene} scene - The current scene
-     */
-    setScene(scene) {
-        this.scene = scene;
     }
 }
 

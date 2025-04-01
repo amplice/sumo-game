@@ -119,7 +119,7 @@ const gameConfig = {
             counterFlashDuration: 500, // Duration of counter flash animation
             lightningSegments: 6,      // Number of segments in lightning effect
             lightningWidth: 5,         // Width of lightning line
-            lightningColor: 0x0000cc,  // Color of lightning effect
+            lightningColor: 0x00cccc,  // Color of lightning effect
             lightningOffset: 15,       // Maximum zigzag offset in pixels
             lightningDuration: 600,    // Lightning effect duration in ms
         }

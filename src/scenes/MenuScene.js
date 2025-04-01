@@ -114,19 +114,19 @@ export default class MenuScene extends Phaser.Scene {
             this.safeStartScene('TestScene');
         });
         
-        // Set current scene in music manager
-        musicManager.setScene(this);
-        
-        // Play background music
-        musicManager.playMusic(this, 'nonbattle_music');
-        
-        // Create mute button
-        this.createMuteButton();
-    
-    this.initialized = true;
-    console.log('MenuScene create completed');
-        this.initialized = true;
-        console.log('MenuScene create completed');
+// Set current scene in music manager
+musicManager.setScene(this);
+
+// Play background music
+musicManager.playMusic(this, 'nonbattle_music');
+
+// Create mute buttons with a short delay to ensure scene is ready
+this.time.delayedCall(50, () => {
+    this.createMuteButton();
+});
+ 
+ this.initialized = true;
+ console.log('MenuScene create completed');
     }
     
 // Update the safeStartScene method in MenuScene.js
@@ -243,43 +243,84 @@ safeStartScene(sceneKey, data = {}) {
     /**
      * Creates a mute button in the top-right corner
      */
-    createMuteButton() {
-        // Get the current mute state
-        const isMuted = this.sound.mute;
+// Update the createMuteButton method in both GameScene.js and MenuScene.js
+
+// Update the createMuteButton method in both GameScene.js and MenuScene.js
+
+createMuteButton() {
+    // Remove the scene active check entirely as it's causing problems
+    // Just create the buttons directly
+
+    // Position in top-right corner
+    const x = this.cameras.main.width - 60;
+    const musicY = 30;
+    const sfxY = 80;
+    
+    // Make sure musicManager is aware of this scene
+    musicManager.setScene(this);
+    
+    // Get current mute states
+    const isMusicMuted = musicManager.isMusicMuted();
+    const isSFXMuted = musicManager.isSFXMuted();
+    
+    // Set button texts based on current states
+    const musicButtonText = isMusicMuted ? 'MUSIC OFF' : 'MUSIC ON';
+    const sfxButtonText = isSFXMuted ? 'FX OFF' : 'FX ON';
+    
+    // Create or update music mute button
+    if (this.musicMuteButton && this.musicMuteButton.active) {
+        this.musicMuteButton.setText(musicButtonText);
+    } else {
+        this.musicMuteButton = this.add.text(x, musicY, musicButtonText, {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            backgroundColor: '#333',
+            padding: { x: 10, y: 5 },
+            fixedWidth: 100,
+            align: 'center'
+        }).setOrigin(0.5);
         
-        // Set text based on current state
-        const buttonText = isMuted ? '🔇' : '🔊';
+        this.musicMuteButton.setInteractive({ useHandCursor: true });
         
-        // Position in top-right corner
-        const x = this.cameras.main.width - 50;
-        const y = 30;
-        
-        // Create or update the button
-        if (this.muteButton) {
-            this.muteButton.setText(buttonText);
-        } else {
-            this.muteButton = this.add.text(x, y, buttonText, {
-                fontSize: '28px',
-                fontStyle: 'bold',
-                backgroundColor: '#333',
-                padding: { x: 10, y: 5 },
-                fixedWidth: 48,
-                align: 'center'
-            }).setOrigin(0.5);
+        // Handle click event for music
+        this.musicMuteButton.on('pointerup', () => {
+            const isMuted = musicManager.toggleMusicMute();
             
-            this.muteButton.setInteractive({ useHandCursor: true });
-            
-            // Handle click event
-            this.muteButton.on('pointerup', () => {
-                // Use our music manager to toggle mute
-                musicManager.setScene(this);
-                const isMuted = musicManager.toggleMute();
-                
-                // Update button text
-                this.muteButton.setText(isMuted ? '🔇' : '🔊');
-            });
-        }
+            // Update button text
+            if (this.musicMuteButton && this.musicMuteButton.active) {
+                this.musicMuteButton.setText(isMuted ? 'MUSIC OFF' : 'MUSIC ON');
+            }
+        });
     }
+    
+    // Create or update SFX mute button
+    if (this.sfxMuteButton && this.sfxMuteButton.active) {
+        this.sfxMuteButton.setText(sfxButtonText);
+    } else {
+        this.sfxMuteButton = this.add.text(x, sfxY, sfxButtonText, {
+            fontSize: '16px',
+            fontStyle: 'bold',
+            backgroundColor: '#333',
+            padding: { x: 10, y: 5 },
+            fixedWidth: 100,
+            align: 'center'
+        }).setOrigin(0.5);
+        
+        this.sfxMuteButton.setInteractive({ useHandCursor: true });
+        
+        // Handle click event for SFX
+        this.sfxMuteButton.on('pointerup', () => {
+            const isMuted = musicManager.toggleSFXMute();
+            
+            // Update button text
+            if (this.sfxMuteButton && this.sfxMuteButton.active) {
+                this.sfxMuteButton.setText(isMuted ? 'FX OFF' : 'FX ON');
+            }
+        });
+    }
+
+    console.log('Mute buttons created successfully');
+}
     // Called when scene is shutting down
     shutdown() {
         console.log('MenuScene shutdown called');
