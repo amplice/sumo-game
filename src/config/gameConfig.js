@@ -101,7 +101,7 @@ const gameConfig = {
             windupCircleAlpha: 0,    // Windup circle transparency
             activeCircleSize: 20,      // Size of active counter circle
             activeCircleColor: 0xFFFF00, // Active counter circle color (yellow)
-            activeCircleAlpha: 0.4,    // Active counter circle transparency
+            activeCircleAlpha: 0,    // Active counter circle transparency
             pulseSize: 20,             // Size of the pulse effect
             pulseColor: 0xFFFFFF,      // Pulse effect color (white)
             pulseAlpha: 0,           // Pulse effect transparency
@@ -114,12 +114,12 @@ const gameConfig = {
             pulsateCycleTime: 200,     // Time for one pulsate cycle in ms
             counterFlashSize: 30,      // Size of flash when counter succeeds
             counterFlashColor: 0xFFFF00, // Color of counter success flash
-            counterFlashAlpha: 0.7,    // Alpha of counter success flash
+            counterFlashAlpha: 0,    // Alpha of counter success flash
             counterFlashScale: 2,      // Scale of counter success flash
             counterFlashDuration: 500, // Duration of counter flash animation
             lightningSegments: 6,      // Number of segments in lightning effect
             lightningWidth: 5,         // Width of lightning line
-            lightningColor: 0xFFFF00,  // Color of lightning effect
+            lightningColor: 0x0000cc,  // Color of lightning effect
             lightningOffset: 15,       // Maximum zigzag offset in pixels
             lightningDuration: 600,    // Lightning effect duration in ms
         }

@@ -436,8 +436,8 @@ counterWindupEffect.once('animationcomplete', () => {
             }
         }
     }
-// Method 3: Activate Counter - Shows tinted idle frame during active counter
-activateCounter() {
+
+    activateCounter() {
     if (this.isCounterWindingUp) {
         this.isCounterWindingUp = false;
         this.isCounterActive = true;
@@ -453,6 +453,20 @@ activateCounter() {
         
         // Reset to idle frame when counter becomes active
         this.playIdleAnimation();
+        
+        // Create the counter activation effect at the player's position
+        const counterEffect = this.scene.add.sprite(this.x, this.y, 'counter_sprites');
+        counterEffect.setOrigin(0.5, 0.5);
+        counterEffect.setScale(1.2); // Make it a bit larger for visibility
+        
+        // Play the counter effect animation
+        counterEffect.play('counter_active_anim');
+        
+        // Set duration to match the counter active duration
+        // This ensures the animation exists for exactly the counter active period
+        this.scene.time.delayedCall(gameConfig.counter.activeDuration, () => {
+            counterEffect.destroy();
+        });
         
         return true;
     }

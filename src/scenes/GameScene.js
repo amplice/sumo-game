@@ -57,6 +57,12 @@ export default class GameScene extends Phaser.Scene {
             frameHeight: 32 
         });
 
+        // Update GameScene.js preload method to load the counter sprites
+this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', { 
+    frameWidth: 64, 
+    frameHeight: 64 
+});
+
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
             // Load sound effects
     this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
@@ -565,6 +571,13 @@ this.anims.create({
     key: 'counter_windup_anim',
     frames: this.anims.generateFrameNumbers('counter_windup', { start: 0, end: 3 }),
     frameRate: 13.33,
+    repeat: 0
+});
+// Add the counter animation in GameScene.js createAnimations method
+this.anims.create({
+    key: 'counter_active_anim',
+    frames: this.anims.generateFrameNumbers('counter_attack', { start: 0, end: 3 }),
+    frameRate: 10,
     repeat: 0
 });
         
