@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import MenuScene from './scenes/MenuScene';
 import GameScene from './scenes/GameScene';
 import TutorialScene from './scenes/TutorialScene';
-import TestScene from './scenes/TestScene';
+// import TestScene from './scenes/TestScene';
 
 // Game configuration with improved scene management
 const config = {
@@ -17,7 +17,9 @@ const config = {
             debug: false
         }
     },
-    scene: [MenuScene, GameScene, TutorialScene, TestScene],
+    scene: [MenuScene, GameScene, TutorialScene],
+    // scene: [MenuScene, GameScene, TutorialScene, TestScene],
+
     parent: 'game',
     // Add callbacks for better scene management
     callbacks: {

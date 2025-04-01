@@ -109,10 +109,10 @@ export default class MenuScene extends Phaser.Scene {
             this.safeStartScene('TutorialScene');
         });
         
-        // Test Scene button (for debugging)
-        this.createButton(1024/2, 520, 'Animation Test', 250, 50, () => {
-            this.safeStartScene('TestScene');
-        });
+        // // Test Scene button (for debugging)
+        // this.createButton(1024/2, 520, 'Animation Test', 250, 50, () => {
+        //     this.safeStartScene('TestScene');
+        // });
         
 // Set current scene in music manager
 musicManager.setScene(this);

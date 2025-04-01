@@ -80,22 +80,23 @@ export default class TutorialScene extends Phaser.Scene {
             "",
             "RULES:",
             "- Push your opponent out of the ring",
-            "- Use Throw for an instant win (requires 1-second windup)",
+            "- Use Throw for an instant win (requires 0.6-second windup)",
             "- Best of 3 rounds wins the match",
-            "- Your facing direction (shown by the pointer) determines where actions are aimed",
+            "- Your facing direction is set by your last movement and determines where actions aim",
             "",
             "COUNTER MECHANICS:",
-            "- During Counter windup (0.5s): You're vulnerable and get pushed extra far",
-            "- During Counter active (0.5s): Counters both Throws AND Pushes",
+            "- During Counter windup (0.3s): You're vulnerable and can be pushed",
+            "- During Counter active (0.3s): Counters both Throws AND Pushes",
             "- If you counter a throw: You throw your opponent instead (instant win)",
-            "- If you counter a push: Your opponent gets pushed back instead",
+            "- If you counter a push: Your opponent gets pushed back instead (1.5x stronger)",
             "",
             "TIPS:",
-            "- You can't move during a throw windup or counter",
+            "- You can't move during throw windup, counter windup, or active counter",
             "- If pushed during a throw windup, the throw is cancelled",
             "- If pushed during counter windup, you get pushed extra far",
             "- Timing is crucial - counter has a brief active window",
-            "- Push has a shorter range but faster execution"
+            "- Push has a 70-pixel range while throw has 100-pixel range",
+            "- Single-player has three difficulty levels that affect AI behavior"
         ];
 
         // Create a container with a mask for scrollable content
