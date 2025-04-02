@@ -218,38 +218,38 @@ adjustUIForMobile() {
         // Make menu button larger for touch
         if (this.pauseButton) {
             console.log('Adjusting pause button');
-            this.pauseButton.setFontSize(28);
-            this.pauseButton.setPadding(10);
-            this.pauseButton.setPosition(this.cameras.main.width - 100, 40);
+            try {
+                this.pauseButton.setFontSize(28);
+                this.pauseButton.setPadding(10);
+                this.pauseButton.setPosition(this.cameras.main.width - 100, 40);
+            } catch (e) {
+                console.error('Error adjusting pauseButton:', e);
+            }
         }
         
-        // Try each UI element adjustment separately with error handling
-        try {
-            console.log('Adjusting round text');
-            if (this.roundText && this.roundText.setFontSize) {
-                this.roundText.setFontSize(28);
-            } else {
-                console.log('roundText not available or missing setFontSize method');
+        // Add safe text resizing - check for existing methods
+        const safeResize = (textObj, size) => {
+            if (textObj && typeof textObj.setFontSize === 'function') {
+                try {
+                    textObj.setFontSize(size);
+                } catch (e) {
+                    console.error(`Error resizing text to ${size}:`, e);
+                }
             }
-        } catch (e) {
-            console.error('Error adjusting round text:', e);
-        }
+        };
         
-        try {
-            console.log('Adjusting score text');
-            if (this.scoreText && this.scoreText.setFontSize) {
-                this.scoreText.setFontSize(28);
-            } else {
-                console.log('scoreText not available or missing setFontSize method');
-            }
-        } catch (e) {
-            console.error('Error adjusting score text:', e);
-        }
+        // Use the safe resize method
+        safeResize(this.roundText, 24);
+        safeResize(this.scoreText, 24);
+        
+        // Adjust positions for mobile view if needed
+        if (this.roundText) this.roundText.setPosition(20, 20);
+        if (this.scoreText) this.scoreText.setPosition(20, 50);
+        
+        console.log('Mobile UI adjustments completed');
     } catch (e) {
         console.error('Error in adjustUIForMobile:', e);
     }
-    
-    console.log('Finished adjusting UI for mobile');
 }
     
     setupInputHandlers() {

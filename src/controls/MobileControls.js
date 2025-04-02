@@ -36,6 +36,15 @@ export default class MobileControls {
                 console.error('Failed to create fallback controls:', e);
             }
         }
+        // Add visual debugging for joystick movement
+    if (scene.game.config.physics.arcade.debug) {
+        this.debugText = scene.add.text(10, 10, 'Joystick Debug', {
+            fontSize: '16px',
+            backgroundColor: '#000',
+            padding: { x: 5, y: 5 },
+            fill: '#fff'
+        }).setDepth(9999);
+    }
     }
 
     // Add a fallback method that doesn't use the joystick
@@ -77,26 +86,35 @@ moveInDirection(x, y, direction) {
     this.player.setDirection(direction);
 }
     
-    createJoystick() {
-        // Get joystick position based on screen size
-        const x = 150;
-        const y = this.scene.cameras.main.height - 150;
-        
-        // Create joystick using Rex Plugins
+createJoystick() {
+    console.log('Creating joystick');
+    // Get joystick position based on screen size
+    const x = 150;
+    const y = this.scene.cameras.main.height - 150;
+    
+    // Create joystick using Rex Plugins
+    try {
         this.joystick = this.scene.plugins.get('rexVirtualJoystick').add(this.scene, {
             x: x,
             y: y,
             radius: 100,
             base: this.scene.add.circle(0, 0, 100, 0x888888, 0.5).setDepth(100),
             thumb: this.scene.add.circle(0, 0, 50, 0xcccccc, 0.8).setDepth(100),
+            // Use 'four' or 'eight' for digital directions instead of analog
             dir: '8dir',   // 8 direction joystick
             forceMin: 16,  // minimum force to be considered as active
             enable: true   // enable immediately
         });
         
-        // Store last angle for better direction handling
-        this.lastAngle = null;
+        console.log('Joystick created successfully, plugin force:', this.joystick.forceMin);
+        
+        // Store movement state to prevent joystick drift
+        this.movementVector = {x: 0, y: 0};
+        this.isMoving = false;
+    } catch (error) {
+        console.error('Error creating joystick:', error);
     }
+}
     
     createActionButtons() {
         const buttonY = this.scene.cameras.main.height - 150;
@@ -159,34 +177,77 @@ moveInDirection(x, y, direction) {
         // Skip if player can't move
         if (!this.player || !this.player.canMove) return;
         
-        // Handle joystick input for movement
-        if (this.joystick.force > 0) {
-            const speed = gameConfig.player.moveSpeed;
-            const angle = this.joystick.angle;
-            const force = Math.min(this.joystick.force / 50, 1); // Normalize force
-            
-            // Calculate velocities based on joystick angle and force
-            let velocityX = Math.cos(angle) * speed * force;
-            let velocityY = Math.sin(angle) * speed * force;
-            
-            // Handle diagonal movement - apply the same logic as keyboard controls
-            if (Math.abs(velocityX) > 0 && Math.abs(velocityY) > 0) {
-                velocityX *= gameConfig.player.diagonalSpeedModifier;
-                velocityY *= gameConfig.player.diagonalSpeedModifier;
-            }
-            
-            // Apply movement to player
-            this.player.setVelocity(velocityX, velocityY);
-            
-            // Update facing direction based on joystick angle
-            this.updatePlayerDirection(angle);
-            
-            // Store this angle
-            this.lastAngle = angle;
-        } else {
-            // No joystick input, stop movement
-            if (this.player.sprite && this.player.sprite.body) {
+        try {
+            // Check if joystick is active
+            if (this.joystick && this.joystick.pointer && this.joystick.pointer.isDown) {
+                // Get raw pointer position relative to joystick base
+                const dx = this.joystick.pointer.x - this.joystick.x;
+                const dy = this.joystick.pointer.y - this.joystick.y;
+                
+                // Calculate distance
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Calculate movement direction (normalized)
+                const speed = gameConfig.player.moveSpeed;
+                let dirX = dx / distance;
+                let dirY = dy / distance;
+                
+                // Calculate velocities
+                let velocityX = dirX * speed;
+                let velocityY = dirY * speed;
+                
+                // Apply diagonal modifier if moving diagonally
+                if (Math.abs(dirX) > 0.1 && Math.abs(dirY) > 0.1) {
+                    velocityX *= gameConfig.player.diagonalSpeedModifier;
+                    velocityY *= gameConfig.player.diagonalSpeedModifier;
+                }
+                
+                // Apply movement to player
+                this.player.setVelocity(velocityX, velocityY);
+                
+                // Update direction based on movement
+                if (Math.abs(dirX) > 0.1 || Math.abs(dirY) > 0.1) {
+                    // Determine cardinal direction
+                    let direction;
+                    const angle = Math.atan2(dirY, dirX);
+                    
+                    // Convert angle to direction
+                    if (angle > -Math.PI/8 && angle <= Math.PI/8) direction = 'right';
+                    else if (angle > Math.PI/8 && angle <= 3*Math.PI/8) direction = 'down-right';
+                    else if (angle > 3*Math.PI/8 && angle <= 5*Math.PI/8) direction = 'down';
+                    else if (angle > 5*Math.PI/8 && angle <= 7*Math.PI/8) direction = 'down-left';
+                    else if (angle > 7*Math.PI/8 || angle <= -7*Math.PI/8) direction = 'left';
+                    else if (angle > -7*Math.PI/8 && angle <= -5*Math.PI/8) direction = 'up-left';
+                    else if (angle > -5*Math.PI/8 && angle <= -3*Math.PI/8) direction = 'up';
+                    else if (angle > -3*Math.PI/8 && angle <= -Math.PI/8) direction = 'up-right';
+                    
+                    // Update player direction
+                    if (direction && this.player.direction !== direction) {
+                        this.player.setDirection(direction);
+                    }
+                }
+                
+                // Update debug text
+                if (this.debugText) {
+                    this.debugText.setText(
+                        `Joystick Direct:\nDelta: ${dx.toFixed(0)},${dy.toFixed(0)}\n` +
+                        `Direction: ${this.player.direction}\n` +
+                        `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}`
+                    );
+                }
+            } else {
+                // No joystick input, stop movement
                 this.player.setVelocity(0, 0);
+                
+                // Update debug text
+                if (this.debugText) {
+                    this.debugText.setText('Joystick: Inactive');
+                }
+            }
+        } catch (error) {
+            console.error('Error in joystick update:', error);
+            if (this.debugText) {
+                this.debugText.setText(`Error: ${error.message}`);
             }
         }
     }
@@ -195,17 +256,36 @@ moveInDirection(x, y, direction) {
         // Convert angle (radians) to 8-direction format
         const degrees = Phaser.Math.RadToDeg(angle);
         
-        let direction = '';
+        console.log(`Updating direction based on angle: ${degrees.toFixed(2)} degrees`);
         
-        // Map degrees to 8 directions
-        if (degrees >= -22.5 && degrees < 22.5) direction = 'right';
-        else if (degrees >= 22.5 && degrees < 67.5) direction = 'down-right';
-        else if (degrees >= 67.5 && degrees < 112.5) direction = 'down';
-        else if (degrees >= 112.5 && degrees < 157.5) direction = 'down-left';
-        else if ((degrees >= 157.5 && degrees <= 180) || (degrees >= -180 && degrees < -157.5)) direction = 'left';
-        else if (degrees >= -157.5 && degrees < -112.5) direction = 'up-left';
-        else if (degrees >= -112.5 && degrees < -67.5) direction = 'up';
-        else if (degrees >= -67.5 && degrees < -22.5) direction = 'up-right';
+        // Convert degrees to a direction
+        let direction;
+        
+        // Map degrees to cardinal and intercardinal directions
+        // Using clearer boundaries with less overlap
+        if (degrees >= -22.5 && degrees < 22.5) {
+            direction = 'right';
+        } else if (degrees >= 22.5 && degrees < 67.5) {
+            direction = 'down-right';
+        } else if (degrees >= 67.5 && degrees < 112.5) {
+            direction = 'down';
+        } else if (degrees >= 112.5 && degrees < 157.5) {
+            direction = 'down-left';
+        } else if ((degrees >= 157.5 && degrees <= 180) || (degrees >= -180 && degrees < -157.5)) {
+            direction = 'left';
+        } else if (degrees >= -157.5 && degrees < -112.5) {
+            direction = 'up-left';
+        } else if (degrees >= -112.5 && degrees < -67.5) {
+            direction = 'up';
+        } else if (degrees >= -67.5 && degrees < -22.5) {
+            direction = 'up-right';
+        } else {
+            // Default in case of invalid angle
+            direction = 'down';
+            console.warn(`Could not map angle ${degrees} to a direction`);
+        }
+        
+        console.log(`Selected direction: ${direction}`);
         
         // Only update direction if it's changed
         if (direction && this.player.direction !== direction) {
