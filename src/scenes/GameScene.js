@@ -3,6 +3,7 @@ import Player from '../player';
 import gameConfig from '../config/gameConfig';
 import AIPlayer from '../ai/AIPlayer';
 import musicManager from '../config/musicManager';
+import MobileControls from '../controls/MobileControls';
 
 
 export default class GameScene extends Phaser.Scene {
@@ -120,8 +121,15 @@ this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', {
             this.physics.world.debugGraphic.visible = false;
         }
         
-        // Set up input keys - use scoped variables to avoid duplicating listeners
+    // Set up input based on platform
+    if (window.isMobile && window.isMobile()) {
+        console.log('Setting up mobile controls');
+        this.setupMobileControls();
+    } else {
+        console.log('Setting up keyboard controls');
         this.setupInputHandlers();
+    }
+   
         
         // Add UI elements
         this.roundText = this.add.text(20, 20, 'Round: 1', gameConfig.ui.fonts.normal);
@@ -162,6 +170,31 @@ this.time.delayedCall(50, () => {
  
  console.log('GameScene create completed');
     }
+
+    // Add a new method to setup mobile controls
+setupMobileControls() {
+    console.log('Creating mobile controls');
+    
+    // Create mobile controls for Player 1 - in single player, opponent is Player 2
+    this.mobileControls = new MobileControls(this, this.player1, this.player2);
+    
+    // In mobile mode, we'll make some UI adjustments
+    this.adjustUIForMobile();
+}
+
+// Add a method to adjust UI for mobile
+adjustUIForMobile() {
+    // Make menu button larger for touch
+    if (this.pauseButton) {
+        this.pauseButton.setFontSize(28);
+        this.pauseButton.setPadding(10);
+        this.pauseButton.setPosition(this.cameras.main.width - 100, 40);
+    }
+    
+    // Adjust other UI elements for mobile if needed
+    this.roundText.setFontSize(28);
+    this.scoreText.setFontSize(28);
+}
     
     setupInputHandlers() {
         // Clean up old input handlers if they exist
@@ -621,27 +654,37 @@ this.anims.create({
         
     }
 
-    update(time, delta) {
-        // Skip everything if round has already ended
-        if (this.roundEnded) {
-            return;
+// Update the update method to handle mobile controls
+update(time, delta) {
+    // Skip everything if round has already ended
+    if (this.roundEnded) {
+        return;
+    }
+    
+    // Update player states
+    if (this.player1) this.player1.update(delta);
+    if (this.player2) this.player2.update(delta);
+    
+    // Only process gameplay if not showing winner text
+    if (!this.winnerText.visible) {
+        // Process player actions first
+        if (!window.isMobile || !window.isMobile()) {
+            // Only handle keyboard actions on non-mobile
+            this.handlePlayerActions();
         }
         
-        // Update player states
-        if (this.player1) this.player1.update(delta);
-        if (this.player2) this.player2.update(delta);
+        // Update mobile controls if they exist
+        if (this.mobileControls) {
+            this.mobileControls.update();
+        }
         
-        // Only process gameplay if not showing winner text
-        if (!this.winnerText.visible) {
-            // Process player actions first
-            this.handlePlayerActions();
-            
-            // Handle AI if in single player mode
-            if (this.gameMode === 'singlePlayer' && this.ai) {
-                this.ai.update(delta);
-            }
-            
-            // Handle player movement only if they can move
+        // Handle AI if in single player mode
+        if (this.gameMode === 'singlePlayer' && this.ai) {
+            this.ai.update(delta);
+        }
+        
+        // Handle player movement only if they can move and we're not on mobile
+        if (!window.isMobile || !window.isMobile()) {
             if (this.player1 && this.player1.canMove) {
                 this.handlePlayerMovement(
                     this.player1,
@@ -661,22 +704,23 @@ this.anims.create({
                     this.arrowKeys.right.isDown
                 );
             }
-            
-            // Update player positions
-            if (this.player1) this.player1.updatePosition();
-            if (this.player2) this.player2.updatePosition();
-            
-            // Check if players are outside the ring
-            if (this.player1 && this.player2) {
-                if (this.checkOutOfBounds(this.player1, this.ringCenter, this.ringRadius)) {
-                    this.endRound('Player 2');
-                }
-                else if (this.checkOutOfBounds(this.player2, this.ringCenter, this.ringRadius)) {
-                    this.endRound('Player 1');
-                }
+        }
+        
+        // Update player positions
+        if (this.player1) this.player1.updatePosition();
+        if (this.player2) this.player2.updatePosition();
+        
+        // Check if players are outside the ring
+        if (this.player1 && this.player2) {
+            if (this.checkOutOfBounds(this.player1, this.ringCenter, this.ringRadius)) {
+                this.endRound('Player 2');
+            }
+            else if (this.checkOutOfBounds(this.player2, this.ringCenter, this.ringRadius)) {
+                this.endRound('Player 1');
             }
         }
     }
+}
 
     // Function to handle player actions
     handlePlayerActions() {
@@ -1536,7 +1580,13 @@ this.anims.create({
         this.tweens.killAll();
         this.time.removeAllEvents();
         
-        // Cleanup before leaving scene
+        // Clean up mobile controls if they exist
+        if (this.mobileControls) {
+            this.mobileControls.destroy();
+            this.mobileControls = null;
+        }
+        
+        // Rest of shutdown method...
         this.cleanupBeforeSceneChange();
         
         // Explicitly destroy game objects
@@ -1560,10 +1610,12 @@ this.anims.create({
         this.player1 = null;
         this.player2 = null;
         this.ai = null;
-            // Stop the music when leaving the scene
-    if (this.backgroundMusic) {
-        this.backgroundMusic.stop();
-    }
+        
+        // Stop the music when leaving the scene
+        if (this.backgroundMusic) {
+            this.backgroundMusic.stop();
+        }
+        
         console.log('GameScene shutdown complete');
     }
 }

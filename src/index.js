@@ -2,13 +2,32 @@ import Phaser from 'phaser';
 import MenuScene from './scenes/MenuScene';
 import GameScene from './scenes/GameScene';
 import TutorialScene from './scenes/TutorialScene';
+import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js';
 // import TestScene from './scenes/TestScene';
 
-// Game configuration with improved scene management
+// Add device detection function
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Make this available globally
+window.isMobile = isMobile;
+
+// Game configuration with improved scene management and responsive scaling
 const config = {
     type: Phaser.AUTO,
-    width: 1024,
-    height: 768,
+    // Add scale manager configuration for responsive design
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 1024,
+        height: 768,
+        // Set max width/height to maintain aspect ratio on larger screens
+        max: {
+            width: 1600,
+            height: 1200
+        }
+    },
     backgroundColor: '#333333',
     physics: {
         default: 'arcade',
@@ -16,6 +35,15 @@ const config = {
             gravity: { y: 0 },
             debug: false
         }
+    },
+    plugins: {
+        global: [
+            {
+                key: 'rexVirtualJoystick',
+                plugin: VirtualJoystickPlugin,
+                start: true
+            }
+        ]
     },
     scene: [MenuScene, GameScene, TutorialScene],
     // scene: [MenuScene, GameScene, TutorialScene, TestScene],
@@ -28,6 +56,7 @@ const config = {
         },
         postBoot: function (game) {
             console.log('Game postBoot');
+            console.log('Running on mobile: ' + isMobile());
             
             // Add global error handling to prevent game crashes
             window.addEventListener('error', function(e) {
@@ -62,3 +91,11 @@ game.scene.start = function (key, data) {
     game.scene.rootScene = key;
     return originalStart.call(this, key, data);
 };
+
+// Add resize event listener to handle orientation changes
+window.addEventListener('resize', function() {
+    if (game) {
+        // Force resize and refresh
+        game.scale.refresh();
+    }
+});
