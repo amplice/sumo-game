@@ -1,4 +1,4 @@
-// In src/controls/MobileControls.js
+// src/controls/MobileControls.js
 
 import gameConfig from '../config/gameConfig';
 
@@ -13,8 +13,8 @@ export default class MobileControls {
         // Create visual debug text if needed
         this.createDebugText();
         
-        // Create D-pad for movement
-        this.createDpad();
+        // Create joystick visuals
+        this.createJoystick();
         
         // Create action buttons
         this.createActionButtons();
@@ -24,7 +24,7 @@ export default class MobileControls {
     
     createDebugText() {
         // Create debug text for development
-        this.debugText = this.scene.add.text(10, 10, 'D-pad Debug', {
+        this.debugText = this.scene.add.text(10, 10, 'Joystick Debug', {
             fontSize: '16px',
             backgroundColor: '#000',
             padding: { x: 5, y: 5 },
@@ -32,69 +32,115 @@ export default class MobileControls {
         }).setDepth(9999);
     }
     
-    createDpad() {
-        console.log('Creating D-pad controls');
+    createJoystick() {
+        console.log('Creating joystick');
         
-        // Position the D-pad in the lower left
-        const centerX = 150;
-        const centerY = this.scene.cameras.main.height - 150;
-        const buttonSize = 70;
-        const buttonOffset = 80; // Distance from center
+        // Position the joystick in the lower left
+        const baseX = 150;
+        const baseY = this.scene.cameras.main.height - 150;
         
-        // Create D-pad buttons
-        this.dpadButtons = {
-            up: this.createDpadButton(centerX, centerY - buttonOffset, '↑', 'up'),
-            right: this.createDpadButton(centerX + buttonOffset, centerY, '→', 'right'),
-            down: this.createDpadButton(centerX, centerY + buttonOffset, '↓', 'down'),
-            left: this.createDpadButton(centerX - buttonOffset, centerY, '←', 'left'),
-            upRight: this.createDpadButton(centerX + buttonOffset * 0.7, centerY - buttonOffset * 0.7, '↗', 'up-right'),
-            downRight: this.createDpadButton(centerX + buttonOffset * 0.7, centerY + buttonOffset * 0.7, '↘', 'down-right'),
-            downLeft: this.createDpadButton(centerX - buttonOffset * 0.7, centerY + buttonOffset * 0.7, '↙', 'down-left'),
-            upLeft: this.createDpadButton(centerX - buttonOffset * 0.7, centerY - buttonOffset * 0.7, '↖', 'up-left')
-        };
+        // Create base circle
+        this.joystickBase = this.scene.add.circle(baseX, baseY, 100, 0x888888, 0.5).setDepth(100);
         
-        // Create a center button as a background
-        this.centerButton = this.scene.add.circle(centerX, centerY, buttonSize - 10, 0x444444, 0.3).setDepth(99);
+        // Create thumb/handle circle
+        this.joystickThumb = this.scene.add.circle(baseX, baseY, 50, 0xcccccc, 0.8).setDepth(101);
         
+        // Store joystick position
+        this.joystickPos = { x: baseX, y: baseY };
+        
+        // Add interactive area over the joystick
+        this.joystickArea = this.scene.add.circle(baseX, baseY, 150, 0xffffff, 0.01)
+            .setInteractive()
+            .setDepth(99);
+            
         // Track active direction
         this.activeDirection = null;
+        this.isJoystickActive = false;
         
-        // Add listeners for stopping movement on pointer up
-        this.scene.input.on('pointerup', () => {
-            this.stopMovement();
-        });
+        // Add touch event listeners
+        this.joystickArea.on('pointerdown', this.handleJoystickDown, this);
+        this.joystickArea.on('pointermove', this.handleJoystickMove, this);
+        this.scene.input.on('pointerup', this.handleJoystickUp, this);
     }
     
-    createDpadButton(x, y, symbol, direction) {
-        // Create circle for the button
-        const button = this.scene.add.circle(x, y, 40, 0x666666, 0.5)
-            .setInteractive({ useHandCursor: true })
-            .setDepth(100);
+    handleJoystickDown(pointer) {
+        // Activate joystick
+        this.isJoystickActive = true;
+        this.handleJoystickMove(pointer);
+    }
+    
+    handleJoystickMove(pointer) {
+        if (!this.isJoystickActive) return;
         
-        // Add text/symbol
-        const text = this.scene.add.text(x, y, symbol, {
-            fontSize: '26px',
-            color: '#ffffff'
-        }).setOrigin(0.5).setDepth(101);
+        // Calculate direction from joystick base to pointer
+        const dx = pointer.x - this.joystickPos.x;
+        const dy = pointer.y - this.joystickPos.y;
         
-        // Add event listeners
-        button.on('pointerdown', () => {
-            this.activateDirection(direction);
-            button.fillColor = 0x888888; // Visual feedback
-        });
+        // Calculate distance
+        const distance = Math.sqrt(dx * dx + dy * dy);
         
-        button.on('pointerup', () => {
-            button.fillColor = 0x666666; // Reset color
-        });
+        // Limit thumb position within base radius
+        const maxDistance = 75; // Max thumb distance from center
+        let thumbX, thumbY;
         
-        button.on('pointerout', () => {
-            button.fillColor = 0x666666; // Reset color if pointer moves out
-        });
+        if (distance > maxDistance) {
+            // Normalize direction and scale to max distance
+            const normalizedX = dx / distance;
+            const normalizedY = dy / distance;
+            thumbX = this.joystickPos.x + normalizedX * maxDistance;
+            thumbY = this.joystickPos.y + normalizedY * maxDistance;
+        } else {
+            // Use pointer position directly
+            thumbX = pointer.x;
+            thumbY = pointer.y;
+        }
         
-        return { visual: button, text, direction };
+        // Update thumb position
+        this.joystickThumb.x = thumbX;
+        this.joystickThumb.y = thumbY;
+        
+        // If distance is sufficient, convert to 8-direction movement
+        if (distance > 20) { // Small deadzone
+            // Calculate angle
+            const angle = Math.atan2(dy, dx);
+            const degrees = Phaser.Math.RadToDeg(angle);
+            
+            // Convert to 8-direction format
+            let direction;
+            
+            // Use 45-degree sectors for 8-way movement
+            if (degrees > -22.5 && degrees <= 22.5) direction = 'right';
+            else if (degrees > 22.5 && degrees <= 67.5) direction = 'down-right';
+            else if (degrees > 67.5 && degrees <= 112.5) direction = 'down';
+            else if (degrees > 112.5 && degrees <= 157.5) direction = 'down-left';
+            else if ((degrees > 157.5 && degrees <= 180) || (degrees >= -180 && degrees <= -157.5)) direction = 'left';
+            else if (degrees > -157.5 && degrees <= -112.5) direction = 'up-left';
+            else if (degrees > -112.5 && degrees <= -67.5) direction = 'up';
+            else if (degrees > -67.5 && degrees <= -22.5) direction = 'up-right';
+            
+            // Only update if direction changed
+            if (direction !== this.activeDirection) {
+                this.activateDirection(direction);
+            }
+        }
+    }
+    
+    handleJoystickUp() {
+        if (this.isJoystickActive) {
+            // Reset joystick
+            this.isJoystickActive = false;
+            this.joystickThumb.x = this.joystickPos.x;
+            this.joystickThumb.y = this.joystickPos.y;
+            
+            // Stop movement
+            this.stopMovement();
+        }
     }
     
     activateDirection(direction) {
+        // Skip if player can't move
+        if (!this.player || !this.player.canMove) return;
+        
         // Set current direction
         this.activeDirection = direction;
         
@@ -144,20 +190,20 @@ export default class MobileControls {
         // Update debug text
         if (this.debugText) {
             this.debugText.setText(
-                `D-pad:\nDirection: ${direction}\n` +
+                `Joystick:\nDirection: ${direction}\n` +
                 `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}`
             );
         }
     }
     
     stopMovement() {
-        if (this.activeDirection) {
+        if (this.player && this.activeDirection) {
             this.player.setVelocity(0, 0);
             this.activeDirection = null;
             
             // Update debug text
             if (this.debugText) {
-                this.debugText.setText('D-pad: Stopped');
+                this.debugText.setText('Joystick: Stopped');
             }
         }
     }
@@ -179,7 +225,7 @@ export default class MobileControls {
     createButton(x, y, text, color) {
         // Create circle for the button
         const button = this.scene.add.circle(x, y, 60, color, 0.7)
-            .setInteractive({ useHandCursor: true })
+            .setInteractive()
             .setDepth(100);
             
         // Add text label
@@ -220,8 +266,8 @@ export default class MobileControls {
     }
     
     update() {
-        // We don't need to do anything here for D-pad since it's all event-based
-        // D-pad movement is handled by the pointerdown/pointerup events
+        // We don't need to do much here since movement is handled by events,
+        // but we can add safety checks or additional logic if needed
     }
     
     destroy() {
@@ -232,18 +278,17 @@ export default class MobileControls {
             this.debugText.destroy();
         }
         
-        // Destroy D-pad buttons
-        if (this.dpadButtons) {
-            Object.values(this.dpadButtons).forEach(button => {
-                if (button.visual) button.visual.destroy();
-                if (button.text) button.text.destroy();
-            });
-        }
+        // Destroy joystick components
+        if (this.joystickBase) this.joystickBase.destroy();
+        if (this.joystickThumb) this.joystickThumb.destroy();
+        if (this.joystickArea) this.joystickArea.destroy();
         
-        // Destroy center button
-        if (this.centerButton) {
-            this.centerButton.destroy();
+        // Remove event listeners
+        if (this.joystickArea) {
+            this.joystickArea.off('pointerdown');
+            this.joystickArea.off('pointermove');
         }
+        this.scene.input.off('pointerup');
         
         // Destroy action buttons
         if (this.pushButton) {
@@ -260,9 +305,6 @@ export default class MobileControls {
             this.counterButton.visual.destroy();
             this.counterButton.text.destroy();
         }
-        
-        // Remove global event listeners
-        this.scene.input.off('pointerup');
         
         console.log('Mobile controls destroyed');
     }
