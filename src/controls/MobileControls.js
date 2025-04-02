@@ -116,35 +116,38 @@ createJoystick() {
     }
 }
     
-    createActionButtons() {
-        const buttonY = this.scene.cameras.main.height - 150;
-        const buttonSpacing = 140;
-        const startX = this.scene.cameras.main.width - buttonSpacing * 2.5;
-        
-        // Create buttons with touch events
-        this.pushButton = this.createButton(startX, buttonY, 'PUSH', 0x0000AA);
-        this.throwButton = this.createButton(startX + buttonSpacing, buttonY, 'THROW', 0xAA5500);
-        this.counterButton = this.createButton(startX + buttonSpacing * 2, buttonY, 'COUNTER', 0xAA0000);
-        
-        // Set up button event listeners
-        this.setupButtonListeners();
-    }
+createActionButtons() {
+    const buttonY = this.scene.cameras.main.height - 150;
+    const buttonSpacing = 140;
+    const startX = this.scene.cameras.main.width - buttonSpacing * 2.5;
     
-    createButton(x, y, text, color) {
-        // Create circle for the button
-        const button = this.scene.add.circle(x, y, 70, color, 0.7)
-            .setInteractive()
-            .setDepth(100);
-            
-        // Add text label
-        const buttonText = this.scene.add.text(x, y, text, {
-            fontSize: '22px',
-            fontStyle: 'bold',
-            color: '#ffffff'
-        }).setOrigin(0.5).setDepth(101);
+    // Increase button size for better touch targets
+    const buttonSize = 80; // Increased from 70
+    
+    // Create buttons with touch events
+    this.pushButton = this.createButton(startX, buttonY, 'PUSH', 0x0000AA, buttonSize);
+    this.throwButton = this.createButton(startX + buttonSpacing, buttonY, 'THROW', 0xAA5500, buttonSize);
+    this.counterButton = this.createButton(startX + buttonSpacing * 2, buttonY, 'COUNTER', 0xAA0000, buttonSize);
+    
+    // Set up button event listeners
+    this.setupButtonListeners();
+}
+    
+createButton(x, y, text, color, size = 70) {
+    // Create circle for the button - now with configurable size
+    const button = this.scene.add.circle(x, y, size, color, 0.7)
+        .setInteractive()
+        .setDepth(100);
         
-        return { visual: button, text: buttonText };
-    }
+    // Add text label with larger font
+    const buttonText = this.scene.add.text(x, y, text, {
+        fontSize: '24px', // Increased from 22px
+        fontStyle: 'bold',
+        color: '#ffffff'
+    }).setOrigin(0.5).setDepth(101);
+    
+    return { visual: button, text: buttonText };
+}
     
     setupButtonListeners() {
         // Push button
@@ -178,62 +181,66 @@ createJoystick() {
         if (!this.player || !this.player.canMove) return;
         
         try {
-            // Check if joystick is active
+            // Handle joystick input for movement
             if (this.joystick && this.joystick.pointer && this.joystick.pointer.isDown) {
                 // Get raw pointer position relative to joystick base
                 const dx = this.joystick.pointer.x - this.joystick.x;
                 const dy = this.joystick.pointer.y - this.joystick.y;
                 
-                // Calculate distance
+                // Calculate distance and normalize direction vector
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                // Calculate movement direction (normalized)
-                const speed = gameConfig.player.moveSpeed;
-                let dirX = dx / distance;
-                let dirY = dy / distance;
-                
-                // Calculate velocities
-                let velocityX = dirX * speed;
-                let velocityY = dirY * speed;
-                
-                // Apply diagonal modifier if moving diagonally
-                if (Math.abs(dirX) > 0.1 && Math.abs(dirY) > 0.1) {
-                    velocityX *= gameConfig.player.diagonalSpeedModifier;
-                    velocityY *= gameConfig.player.diagonalSpeedModifier;
-                }
-                
-                // Apply movement to player
-                this.player.setVelocity(velocityX, velocityY);
-                
-                // Update direction based on movement
-                if (Math.abs(dirX) > 0.1 || Math.abs(dirY) > 0.1) {
-                    // Determine cardinal direction
-                    let direction;
-                    const angle = Math.atan2(dirY, dirX);
+                if (distance > 0) {
+                    // Normalize the direction vector
+                    const dirX = dx / distance;
+                    const dirY = dy / distance;
                     
-                    // Convert angle to direction
-                    if (angle > -Math.PI/8 && angle <= Math.PI/8) direction = 'right';
-                    else if (angle > Math.PI/8 && angle <= 3*Math.PI/8) direction = 'down-right';
-                    else if (angle > 3*Math.PI/8 && angle <= 5*Math.PI/8) direction = 'down';
-                    else if (angle > 5*Math.PI/8 && angle <= 7*Math.PI/8) direction = 'down-left';
-                    else if (angle > 7*Math.PI/8 || angle <= -7*Math.PI/8) direction = 'left';
-                    else if (angle > -7*Math.PI/8 && angle <= -5*Math.PI/8) direction = 'up-left';
-                    else if (angle > -5*Math.PI/8 && angle <= -3*Math.PI/8) direction = 'up';
-                    else if (angle > -3*Math.PI/8 && angle <= -Math.PI/8) direction = 'up-right';
+                    // Get the full speed from config - exactly the same as keyboard
+                    const speed = gameConfig.player.moveSpeed;
                     
-                    // Update player direction
-                    if (direction && this.player.direction !== direction) {
-                        this.player.setDirection(direction);
+                    // Calculate velocities at full speed (no partial joystick movement)
+                    let velocityX = dirX * speed;
+                    let velocityY = dirY * speed;
+                    
+                    // Apply diagonal modifier if moving diagonally - same logic as keyboard
+                    if (Math.abs(dirX) > 0.1 && Math.abs(dirY) > 0.1) {
+                        velocityX *= gameConfig.player.diagonalSpeedModifier;
+                        velocityY *= gameConfig.player.diagonalSpeedModifier;
                     }
-                }
-                
-                // Update debug text
-                if (this.debugText) {
-                    this.debugText.setText(
-                        `Joystick Direct:\nDelta: ${dx.toFixed(0)},${dy.toFixed(0)}\n` +
-                        `Direction: ${this.player.direction}\n` +
-                        `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}`
-                    );
+                    
+                    // Apply movement to player
+                    this.player.setVelocity(velocityX, velocityY);
+                    
+                    // Update direction based on movement
+                    if (Math.abs(dirX) > 0.1 || Math.abs(dirY) > 0.1) {
+                        // Determine cardinal direction
+                        let direction;
+                        const angle = Math.atan2(dirY, dirX);
+                        
+                        // Convert angle to direction
+                        if (angle > -Math.PI/8 && angle <= Math.PI/8) direction = 'right';
+                        else if (angle > Math.PI/8 && angle <= 3*Math.PI/8) direction = 'down-right';
+                        else if (angle > 3*Math.PI/8 && angle <= 5*Math.PI/8) direction = 'down';
+                        else if (angle > 5*Math.PI/8 && angle <= 7*Math.PI/8) direction = 'down-left';
+                        else if (angle > 7*Math.PI/8 || angle <= -7*Math.PI/8) direction = 'left';
+                        else if (angle > -7*Math.PI/8 && angle <= -5*Math.PI/8) direction = 'up-left';
+                        else if (angle > -5*Math.PI/8 && angle <= -3*Math.PI/8) direction = 'up';
+                        else if (angle > -3*Math.PI/8 && angle <= -Math.PI/8) direction = 'up-right';
+                        
+                        // Update player direction
+                        if (direction && this.player.direction !== direction) {
+                            this.player.setDirection(direction);
+                        }
+                    }
+                    
+                    // Update debug text
+                    if (this.debugText) {
+                        this.debugText.setText(
+                            `Joystick Direct:\nDelta: ${dx.toFixed(0)},${dy.toFixed(0)}\n` +
+                            `Direction: ${this.player.direction}\n` +
+                            `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}`
+                        );
+                    }
                 }
             } else {
                 // No joystick input, stop movement
