@@ -24,7 +24,7 @@ export default class MenuScene extends Phaser.Scene {
         if (!this.textures.exists('ring_background')) {
             this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
         }
-        this.load.audio('nonbattle_music', 'assets/audio/nonbattle_music.mp3');
+        musicManager.preloadSounds(this);
     }
 
     create() {

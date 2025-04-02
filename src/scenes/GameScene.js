@@ -64,11 +64,7 @@ this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', {
 });
 
         this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
-            // Load sound effects
-    this.load.audio('push_sound', 'assets/audio/push_sound.mp3');
-    this.load.audio('push_hit', 'assets/audio/push_hit.mp3');
-        // Load the battle music
-        this.load.audio('battle_music', 'assets/audio/battle_music.mp3');
+        musicManager.preloadSounds(this);
         
         // Log when atlas is loaded
         this.load.on('complete', () => {
@@ -112,8 +108,8 @@ this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', {
         this.createAnimations();
         
         // Add players to the scene
-        this.player1 = new Player(this, 1024/2 - 100, 768/2 + 100, 'sumo_sprites', gameConfig.player.colors.player1);
-        this.player2 = new Player(this, 1024/2 + 100, 768/2 - 100, 'sumo_sprites', gameConfig.player.colors.player2);
+        this.player1 = new Player(this, 1024/2 - 80, 768/2 -30, 'sumo_sprites', gameConfig.player.colors.player1);
+        this.player2 = new Player(this, 1024/2 + 80, 768/2 -30, 'sumo_sprites', gameConfig.player.colors.player2);
         
         // Set up collision between players
         this.collider = this.physics.add.collider(this.player1.sprite, this.player2.sprite);
@@ -1482,10 +1478,10 @@ this.anims.create({
         
         // Reset player positions
         if (this.player1 && this.player2) {
-            this.player1.x = 1024/2 - 120;
-            this.player1.y = 768/2 + 120;
-            this.player2.x = 1024/2 + 120;
-            this.player2.y = 768/2 - 120;
+            this.player1.x = 1024/2 - 80;
+            this.player1.y = 768/2 - 30;
+            this.player2.x = 1024/2 + 80;
+            this.player2.y = 768/2 - 30;
             
             // Reset player states
             this.player1.canMove = true;

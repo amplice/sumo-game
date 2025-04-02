@@ -1,4 +1,5 @@
 import gameConfig from './config/gameConfig';
+import musicManager from './config/musicManager';
 
 export default class Player {
     constructor(scene, x, y, spriteKey, color) {
@@ -297,7 +298,7 @@ export default class Player {
             this.isThrowWindingUp = true;
             this.throwWindupTimer = 0;
             this.canMove = false; // Prevent movement during windup
-            
+            this.windupSound = musicManager.playSFX(this.scene, 'windup_sound', { volume: 0.5 });            
             // Immediately stop all movement
             this.setVelocity(0, 0);
             
@@ -357,7 +358,7 @@ throwDustEffect.once('animationcomplete', () => {
             this.isCounterWindingUp = true;
             this.counterWindupTimer = 0;
             this.canMove = false; // Prevent movement during counter windup
-            
+            this.windupSound = musicManager.playSFX(this.scene, 'windup_sound', { volume: 0.5 });
             // Immediately stop all movement
             this.setVelocity(0, 0);
             
@@ -443,6 +444,11 @@ counterWindupEffect.once('animationcomplete', () => {
         this.isCounterActive = true;
         this.counterActiveTimer = 0;
         this.canMove = false; // Still can't move during active counter
+         // Stop windup sound if it's playing
+ 
+        
+        // Play counter activation sound
+        musicManager.playSFX(this.scene, 'counter_sound', { volume: 0.7 });
         
         // Ensure velocity is still zero when counter activates
         this.setVelocity(0, 0);
@@ -500,6 +506,11 @@ counterWindupEffect.once('animationcomplete', () => {
             this.isThrowWindingUp = false;
             this.canMove = true;
             this.throwWindupCircle.setVisible(false);
+
+ 
+        
+        // Play throw activation sound
+        musicManager.playSFX(this.scene, 'throw_sound', {volume: 0.9});
             
             console.log("executeThrow - Throw execution (animation already playing)");
             
@@ -531,7 +542,7 @@ const angle = Math.atan2(dirVector.y, dirVector.x) * (180 / Math.PI); // Add 90 
 // Create the throw end effect sprite
 const throwEndEffect = this.scene.add.sprite(effectX, effectY, 'throw_end');
 throwEndEffect.setOrigin(0.5, 0.5);
-throwEndEffect.angle = angle; // Rotate to match throw direction
+throwEndEffect.angle = angle + 90; // Rotate to match throw direction
 throwEndEffect.setScale(1.3); // Make it a bit larger
 
 // Play the throw end animation

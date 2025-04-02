@@ -18,6 +18,17 @@ class MusicManager {
      * @param {string} key - The key for the music asset
      * @param {object} config - Configuration options for the music
      */
+    preloadSounds(scene) {
+
+        scene.load.audio('windup_sound', 'assets/audio/windup_sound.mp3');
+        scene.load.audio('throw_sound', 'assets/audio/throw_sound.mp3');
+        scene.load.audio('counter_sound', 'assets/audio/counter_sound.mp3');
+        scene.load.audio('push_sound', 'assets/audio/push_sound.mp3');
+        scene.load.audio('push_hit', 'assets/audio/push_hit.mp3');
+        scene.load.audio('battle_music', 'assets/audio/battle_music.mp3');
+        scene.load.audio('nonbattle_music', 'assets/audio/nonbattle_music.mp3');
+    }
+
     playMusic(scene, key, config = {}) {
         console.log(`MusicManager: Request to play music ${key}`);
         
