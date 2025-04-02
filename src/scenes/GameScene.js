@@ -172,28 +172,84 @@ this.time.delayedCall(50, () => {
     }
 
     // Add a new method to setup mobile controls
+// Update setupMobileControls in GameScene.js
 setupMobileControls() {
     console.log('Creating mobile controls');
     
-    // Create mobile controls for Player 1 - in single player, opponent is Player 2
-    this.mobileControls = new MobileControls(this, this.player1, this.player2);
-    
-    // In mobile mode, we'll make some UI adjustments
-    this.adjustUIForMobile();
+    try {
+        // Check if the Rex plugin is available
+        const rexPlugin = this.plugins.get('rexVirtualJoystick');
+        
+        if (!rexPlugin) {
+            console.error('Rex VirtualJoystick plugin not found!');
+            
+            // Create a visible error message on screen
+            this.add.text(this.cameras.main.width/2, 100, 
+                'Controls plugin not loaded.\nPlease refresh the page.',
+                { fontSize: '24px', fill: '#ff0000', align: 'center' })
+                .setOrigin(0.5);
+                
+            return;
+        }
+        
+        console.log('Rex plugin found:', rexPlugin);
+        
+        // Create mobile controls for Player 1 - in single player, opponent is Player 2
+        this.mobileControls = new MobileControls(this, this.player1, this.player2);
+        
+        // In mobile mode, we'll make some UI adjustments
+        this.adjustUIForMobile();
+    } catch (error) {
+        console.error('Error setting up mobile controls:', error);
+        
+        // Create a visible error message on screen
+        this.add.text(this.cameras.main.width/2, 100, 
+            'Error setting up mobile controls:\n' + error.message,
+            { fontSize: '20px', fill: '#ff0000', align: 'center' })
+            .setOrigin(0.5);
+    }
 }
-
 // Add a method to adjust UI for mobile
+// In GameScene.js, update the adjustUIForMobile method
 adjustUIForMobile() {
-    // Make menu button larger for touch
-    if (this.pauseButton) {
-        this.pauseButton.setFontSize(28);
-        this.pauseButton.setPadding(10);
-        this.pauseButton.setPosition(this.cameras.main.width - 100, 40);
+    console.log('Adjusting UI for mobile');
+    
+    try {
+        // Make menu button larger for touch
+        if (this.pauseButton) {
+            console.log('Adjusting pause button');
+            this.pauseButton.setFontSize(28);
+            this.pauseButton.setPadding(10);
+            this.pauseButton.setPosition(this.cameras.main.width - 100, 40);
+        }
+        
+        // Try each UI element adjustment separately with error handling
+        try {
+            console.log('Adjusting round text');
+            if (this.roundText && this.roundText.setFontSize) {
+                this.roundText.setFontSize(28);
+            } else {
+                console.log('roundText not available or missing setFontSize method');
+            }
+        } catch (e) {
+            console.error('Error adjusting round text:', e);
+        }
+        
+        try {
+            console.log('Adjusting score text');
+            if (this.scoreText && this.scoreText.setFontSize) {
+                this.scoreText.setFontSize(28);
+            } else {
+                console.log('scoreText not available or missing setFontSize method');
+            }
+        } catch (e) {
+            console.error('Error adjusting score text:', e);
+        }
+    } catch (e) {
+        console.error('Error in adjustUIForMobile:', e);
     }
     
-    // Adjust other UI elements for mobile if needed
-    this.roundText.setFontSize(28);
-    this.scoreText.setFontSize(28);
+    console.log('Finished adjusting UI for mobile');
 }
     
     setupInputHandlers() {

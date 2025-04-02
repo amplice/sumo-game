@@ -3,19 +3,79 @@ import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-p
 
 export default class MobileControls {
     constructor(scene, player, opponent) {
-        this.scene = scene;
-        this.player = player;
-        this.opponent = opponent;
-            // Make sure the plugin is installed
-    if (!scene.plugins.get('rexVirtualJoystick')) {
-        scene.plugins.installScenePlugin('rexVirtualJoystick', VirtualJoystickPlugin, 'rexVirtualJoystick', scene);
-    }
-        // Create joystick
-        this.createJoystick();
+        console.log('MobileControls constructor called');
         
-        // Create action buttons
-        this.createActionButtons();
+        try {
+            this.scene = scene;
+            this.player = player;
+            this.opponent = opponent;
+            
+            // Check for Rex plugin
+            const rexPlugin = scene.plugins.get('rexVirtualJoystick');
+            if (!rexPlugin) {
+                console.error('Rex VirtualJoystick plugin not available in MobileControls constructor');
+                throw new Error('VirtualJoystick plugin missing');
+            }
+            
+            console.log('Creating joystick with plugin:', rexPlugin);
+            
+            // Create joystick
+            this.createJoystick();
+            
+            // Create action buttons
+            this.createActionButtons();
+            
+            console.log('Mobile controls successfully created');
+        } catch (error) {
+            console.error('Error in MobileControls constructor:', error);
+            
+            // Create a simple fallback control - just action buttons without joystick
+            try {
+                this.createActionButtonsWithoutJoystick();
+            } catch (e) {
+                console.error('Failed to create fallback controls:', e);
+            }
+        }
     }
+
+    // Add a fallback method that doesn't use the joystick
+createActionButtonsWithoutJoystick() {
+    console.log('Creating fallback controls (buttons only)');
+    
+    const buttonY = this.scene.cameras.main.height - 150;
+    const buttonSpacing = 140;
+    const startX = this.scene.cameras.main.width - buttonSpacing * 2.5;
+    
+    // Create buttons with touch events
+    this.pushButton = this.createButton(startX, buttonY, 'PUSH', 0x0000AA);
+    this.throwButton = this.createButton(startX + buttonSpacing, buttonY, 'THROW', 0xAA5500);
+    this.counterButton = this.createButton(startX + buttonSpacing * 2, buttonY, 'COUNTER', 0xAA0000);
+    
+    // Add fallback movement buttons
+    this.upButton = this.createButton(150, buttonY - 100, '↑', 0x555555);
+    this.downButton = this.createButton(150, buttonY + 100, '↓', 0x555555);
+    this.leftButton = this.createButton(50, buttonY, '←', 0x555555);
+    this.rightButton = this.createButton(250, buttonY, '→', 0x555555);
+    
+    // Set up directions
+    this.upButton.visual.on('pointerdown', () => this.moveInDirection(0, -1, 'up'));
+    this.downButton.visual.on('pointerdown', () => this.moveInDirection(0, 1, 'down'));
+    this.leftButton.visual.on('pointerdown', () => this.moveInDirection(-1, 0, 'left'));
+    this.rightButton.visual.on('pointerdown', () => this.moveInDirection(1, 0, 'right'));
+    
+    // Stop on pointer up
+    this.scene.input.on('pointerup', () => {
+        if (this.player) this.player.setVelocity(0, 0);
+    });
+}
+
+moveInDirection(x, y, direction) {
+    if (!this.player || !this.player.canMove) return;
+    
+    const speed = gameConfig.player.moveSpeed;
+    this.player.setVelocity(x * speed, y * speed);
+    this.player.setDirection(direction);
+}
     
     createJoystick() {
         // Get joystick position based on screen size

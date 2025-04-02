@@ -38,7 +38,7 @@ const config = {
     },
     plugins: {
         global: [
-            {
+            { 
                 key: 'rexVirtualJoystick',
                 plugin: VirtualJoystickPlugin,
                 start: true
