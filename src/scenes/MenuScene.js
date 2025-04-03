@@ -1,17 +1,24 @@
 import gameConfig from '../config/gameConfig';
 import musicManager from '../config/musicManager';
+import SimpleNetworking from '../networking/SimpleNetworking';
 
 export default class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
         this.selectedDifficulty = 'medium';
         this.initialized = false;
+        this.networkingInitialized = false;
     }
 
-    init() {
+    init(data) {
         console.log('MenuScene init called');
         this.selectedDifficulty = 'medium';
         this.initialized = false;
+        
+        // Check for message from other scenes
+        if (data && data.message) {
+            this.pendingMessage = data.message;
+        }
     }
 
     preload() {
@@ -39,11 +46,6 @@ export default class MenuScene extends Phaser.Scene {
         const scale = Math.max(scaleX, scaleY);
         backgroundImage.setScale(scale);
             
-        // // Create the ring circle over the background
-        // const ringRadius = gameConfig.ring.radius - 20;
-        // const ring = this.add.circle(1024/2, 400, ringRadius, gameConfig.ring.color, 0.2);
-        // ring.setStrokeStyle(gameConfig.ring.borderWidth, gameConfig.ring.borderColor);
-
         // Add sumo sprites to the menu for visual preview
         const blueSumo = this.add.sprite(1024/2 - 100, 185, 'sumo_sprites', 'down_idle')
             .setScale(gameConfig.player.spriteScale);
@@ -104,53 +106,239 @@ export default class MenuScene extends Phaser.Scene {
 
         // Difficulty selection buttons with better spacing and consistent sizing
         this.createDifficultyButtons();
+        
+        // Create online play buttons
+        this.createOnlineButtons();
 
-        this.createButton(1024/2, 450, 'How to Play', 250, 50, () => {
+        this.createButton(1024/2, 520, 'How to Play', 250, 50, () => {
             this.safeStartScene('TutorialScene');
         });
         
-        // // Test Scene button (for debugging)
-        // this.createButton(1024/2, 520, 'Animation Test', 250, 50, () => {
-        //     this.safeStartScene('TestScene');
-        // });
+        // Set current scene in music manager
+        musicManager.setScene(this);
+
+        // Play background music
+        musicManager.playMusic(this, 'nonbattle_music');
+
+        // Create mute buttons with a short delay to ensure scene is ready
+        this.time.delayedCall(50, () => {
+            this.createMuteButton();
+        });
         
-// Set current scene in music manager
-musicManager.setScene(this);
-
-// Play background music
-musicManager.playMusic(this, 'nonbattle_music');
-
-// Create mute buttons with a short delay to ensure scene is ready
-this.time.delayedCall(50, () => {
-    this.createMuteButton();
-});
- 
- this.initialized = true;
- console.log('MenuScene create completed');
+        // Show any pending message
+        if (this.pendingMessage) {
+            this.showMessage(this.pendingMessage);
+            this.pendingMessage = null;
+        }
+         
+        this.initialized = true;
+        console.log('MenuScene create completed');
     }
     
-// Update the safeStartScene method in MenuScene.js
-safeStartScene(sceneKey, data = {}) {
-    console.log(`Safely starting scene: ${sceneKey}`);
-    
-    // Cancel any active tweens
-    this.tweens.killAll();
-    
-    // Remove any temporary input listeners
-    this.input.keyboard.removeAllKeys(true);
-    
-    // Disable all interactive elements to prevent multiple clicks
-    this.children.list.forEach(child => {
-        if (child.input && child.input.enabled) {
-            child.disableInteractive();
+    createOnlineButtons() {
+        // Create network manager if it doesn't exist
+        if (!this.game.networking) {
+            this.game.networking = new SimpleNetworking(this.game);
+            this.networkingInitialized = false;
         }
-    });
+        
+        // Host Game button
+        this.createButton(1024/2 - 120, 400, 'Host Game', 200, 50, () => {
+            this.initNetworkingIfNeeded(() => {
+                const roomId = this.game.networking.hostGame();
+                this.showRoomCode(roomId);
+            });
+        });
+        
+        // Join Game button
+        this.createButton(1024/2 + 120, 400, 'Join Game', 200, 50, () => {
+            this.initNetworkingIfNeeded(() => {
+                this.promptForRoomCode();
+            });
+        });
+    }
     
-    // Short delay before transition to ensure cleanup
-    this.time.delayedCall(50, () => {
-        this.scene.start(sceneKey, data);
-    });
-}
+    initNetworkingIfNeeded(callback) {
+        if (!this.networkingInitialized) {
+            this.showMessage('Initializing network...');
+            
+            // Create networking instance if needed
+            if (!this.game.networking) {
+                this.game.networking = new SimpleNetworking(this.game);
+            }
+            
+            this.game.networking.initialize()
+                .then(() => {
+                    this.networkingInitialized = true;
+                    callback();
+                })
+                .catch(err => {
+                    console.error('Failed to initialize networking:', err);
+                    this.showMessage('Network error. Try again.');
+                });
+        } else {
+            callback();
+        }
+    }
+    
+    // Show room code for host
+    showRoomCode(roomId) {
+        // Create a modal display with the room code
+        const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
+            .setOrigin(0)
+            .setInteractive();
+        
+        const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
+            .setStrokeStyle(2, 0xFFFFFF);
+        
+        const titleText = this.add.text(1024/2, 768/2 - 100, 'Share this code:', {
+            fontSize: '24px',
+            fill: '#FFFFFF'
+        }).setOrigin(0.5);
+        
+        const codeText = this.add.text(1024/2, 768/2, roomId, {
+            fontSize: '28px',
+            fill: '#FFFF00',
+            backgroundColor: '#000000',
+            padding: { x: 10, y: 5 }
+        }).setOrigin(0.5);
+        
+        const infoText = this.add.text(1024/2, 768/2 + 60, 'Waiting for opponent...', {
+            fontSize: '20px',
+            fill: '#FFFFFF'
+        }).setOrigin(0.5);
+        
+        const cancelButton = this.createButton(1024/2, 768/2 + 120, 'Cancel', 150, 40, () => {
+            this.game.networking.disconnect();
+            overlay.destroy();
+            panel.destroy();
+            titleText.destroy();
+            codeText.destroy();
+            infoText.destroy();
+            cancelButton.button.destroy();
+            cancelButton.text.destroy();
+        });
+    }
+
+    // Prompt for room code to join
+    promptForRoomCode() {
+        // Create simple UI for entering room code
+        const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
+            .setOrigin(0)
+            .setInteractive();
+        
+        const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
+            .setStrokeStyle(2, 0xFFFFFF);
+        
+        const titleText = this.add.text(1024/2, 768/2 - 100, 'Enter Room Code:', {
+            fontSize: '24px',
+            fill: '#FFFFFF'
+        }).setOrigin(0.5);
+        
+        // Create a more direct HTML input that works better with focus
+        const element = this.add.dom(1024/2, 768/2).createFromHTML(`
+            <div style="width: 100%; text-align: center;">
+                <input type="text" id="roomCode" placeholder="Enter code here" 
+                       style="width: 300px; padding: 10px; font-size: 18px; text-align: center; border: none; outline: none;">
+            </div>
+        `);
+        
+        // Focus the input field immediately
+        element.addListener('added', () => {
+            document.getElementById('roomCode').focus();
+        });
+        
+        // Create a simpler text field alternative if DOM isn't working well
+        const instructionText = this.add.text(1024/2, 768/2 + 30, 
+            'Type the room code then click Join', 
+            { fontSize: '16px', fill: '#aaaaaa' }
+        ).setOrigin(0.5);
+        
+        // Variable to store typed text in case DOM input isn't working
+        let manualInputText = '';
+        
+        // Add a keyboard listener for the entire scene
+        const keyboardListener = this.input.keyboard.on('keydown', (event) => {
+            // If it's a letter, number, or dash, add it to the input
+            if (/^[a-zA-Z0-9-]$/.test(event.key)) {
+                manualInputText += event.key;
+                document.getElementById('roomCode').value = manualInputText;
+            } 
+            // Handle backspace
+            else if (event.key === 'Backspace') {
+                manualInputText = manualInputText.slice(0, -1);
+                document.getElementById('roomCode').value = manualInputText;
+            }
+        });
+        
+        // Join button
+        const joinButton = this.createButton(1024/2, 768/2 + 80, 'Join', 150, 40, () => {
+            // Try to get the value from the DOM input first
+            let inputElement = document.getElementById('roomCode');
+            let roomId = (inputElement && inputElement.value) ? inputElement.value.trim() : manualInputText.trim();
+            
+            if (roomId) {
+                // Remove the keyboard listener
+                if (keyboardListener) {
+                    this.input.keyboard.removeListener('keydown', keyboardListener);
+                }
+                
+                this.game.networking.joinGame(roomId);
+                
+                // Show connecting message
+                titleText.setText('Connecting...');
+                element.setVisible(false);
+                instructionText.setVisible(false);
+                joinButton.button.setVisible(false);
+                joinButton.text.setVisible(false);
+                cancelButton.button.setVisible(false);
+                cancelButton.text.setVisible(false);
+            } else {
+                // Show error if no room code entered
+                instructionText.setText('Please enter a room code').setStyle({ fill: '#ff0000' });
+            }
+        });
+        
+        // Cancel button
+        const cancelButton = this.createButton(1024/2, 768/2 + 140, 'Cancel', 150, 40, () => {
+            // Remove the keyboard listener
+            if (keyboardListener) {
+                this.input.keyboard.removeListener('keydown', keyboardListener);
+            }
+            
+            overlay.destroy();
+            panel.destroy();
+            titleText.destroy();
+            element.destroy();
+            instructionText.destroy();
+            joinButton.button.destroy();
+            joinButton.text.destroy();
+            cancelButton.button.destroy();
+            cancelButton.text.destroy();
+        });
+    }
+    
+    safeStartScene(sceneKey, data = {}) {
+        console.log(`Safely starting scene: ${sceneKey}`);
+        
+        // Cancel any active tweens
+        this.tweens.killAll();
+        
+        // Remove any temporary input listeners
+        this.input.keyboard.removeAllKeys(true);
+        
+        // Disable all interactive elements to prevent multiple clicks
+        this.children.list.forEach(child => {
+            if (child.input && child.input.enabled) {
+                child.disableInteractive();
+            }
+        });
+        
+        // Short delay before transition to ensure cleanup
+        this.time.delayedCall(50, () => {
+            this.scene.start(sceneKey, data);
+        });
+    }
 
     createButton(x, y, text, width, height, callback) {
         const buttonConfig = gameConfig.ui.buttons;
@@ -182,7 +370,7 @@ safeStartScene(sceneKey, data = {}) {
     }
     
     createDifficultyButtons() {
-        const y = 390;
+        const y = 460;
         const spacing = 110;
         const difficulties = ['easy', 'medium', 'hard'];
         this.difficultyButtons = {};
@@ -240,87 +428,101 @@ safeStartScene(sceneKey, data = {}) {
     formatDifficulty(difficulty) {
         return difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     }
-    /**
-     * Creates a mute button in the top-right corner
-     */
-// Update the createMuteButton method in both GameScene.js and MenuScene.js
 
-// Update the createMuteButton method in both GameScene.js and MenuScene.js
-
-createMuteButton() {
-    // Remove the scene active check entirely as it's causing problems
-    // Just create the buttons directly
-
-    // Position in top-right corner
-    const x = this.cameras.main.width - 60;
-    const musicY = 30;
-    const sfxY = 80;
-    
-    // Make sure musicManager is aware of this scene
-    musicManager.setScene(this);
-    
-    // Get current mute states
-    const isMusicMuted = musicManager.isMusicMuted();
-    const isSFXMuted = musicManager.isSFXMuted();
-    
-    // Set button texts based on current states
-    const musicButtonText = isMusicMuted ? 'MUSIC OFF' : 'MUSIC ON';
-    const sfxButtonText = isSFXMuted ? 'FX OFF' : 'FX ON';
-    
-    // Create or update music mute button
-    if (this.musicMuteButton && this.musicMuteButton.active) {
-        this.musicMuteButton.setText(musicButtonText);
-    } else {
-        this.musicMuteButton = this.add.text(x, musicY, musicButtonText, {
-            fontSize: '16px',
-            fontStyle: 'bold',
-            backgroundColor: '#333',
-            padding: { x: 10, y: 5 },
-            fixedWidth: 100,
-            align: 'center'
-        }).setOrigin(0.5);
+    createMuteButton() {
+        // Position in top-right corner
+        const x = this.cameras.main.width - 60;
+        const musicY = 30;
+        const sfxY = 80;
         
-        this.musicMuteButton.setInteractive({ useHandCursor: true });
+        // Make sure musicManager is aware of this scene
+        musicManager.setScene(this);
         
-        // Handle click event for music
-        this.musicMuteButton.on('pointerup', () => {
-            const isMuted = musicManager.toggleMusicMute();
+        // Get current mute states
+        const isMusicMuted = musicManager.isMusicMuted();
+        const isSFXMuted = musicManager.isSFXMuted();
+        
+        // Set button texts based on current states
+        const musicButtonText = isMusicMuted ? 'MUSIC OFF' : 'MUSIC ON';
+        const sfxButtonText = isSFXMuted ? 'FX OFF' : 'FX ON';
+        
+        // Create or update music mute button
+        if (this.musicMuteButton && this.musicMuteButton.active) {
+            this.musicMuteButton.setText(musicButtonText);
+        } else {
+            this.musicMuteButton = this.add.text(x, musicY, musicButtonText, {
+                fontSize: '16px',
+                fontStyle: 'bold',
+                backgroundColor: '#333',
+                padding: { x: 10, y: 5 },
+                fixedWidth: 100,
+                align: 'center'
+            }).setOrigin(0.5);
             
-            // Update button text
-            if (this.musicMuteButton && this.musicMuteButton.active) {
-                this.musicMuteButton.setText(isMuted ? 'MUSIC OFF' : 'MUSIC ON');
+            this.musicMuteButton.setInteractive({ useHandCursor: true });
+            
+            // Handle click event for music
+            this.musicMuteButton.on('pointerup', () => {
+                const isMuted = musicManager.toggleMusicMute();
+                
+                // Update button text
+                if (this.musicMuteButton && this.musicMuteButton.active) {
+                    this.musicMuteButton.setText(isMuted ? 'MUSIC OFF' : 'MUSIC ON');
+                }
+            });
+        }
+        
+        // Create or update SFX mute button
+        if (this.sfxMuteButton && this.sfxMuteButton.active) {
+            this.sfxMuteButton.setText(sfxButtonText);
+        } else {
+            this.sfxMuteButton = this.add.text(x, sfxY, sfxButtonText, {
+                fontSize: '16px',
+                fontStyle: 'bold',
+                backgroundColor: '#333',
+                padding: { x: 10, y: 5 },
+                fixedWidth: 100,
+                align: 'center'
+            }).setOrigin(0.5);
+            
+            this.sfxMuteButton.setInteractive({ useHandCursor: true });
+            
+            // Handle click event for SFX
+            this.sfxMuteButton.on('pointerup', () => {
+                const isMuted = musicManager.toggleSFXMute();
+                
+                // Update button text
+                if (this.sfxMuteButton && this.sfxMuteButton.active) {
+                    this.sfxMuteButton.setText(isMuted ? 'FX OFF' : 'FX ON');
+                }
+            });
+        }
+
+        console.log('Mute buttons created successfully');
+    }
+    
+    // Show a message to the user
+    showMessage(message, duration = 3000) {
+        if (this.messageText) {
+            this.messageText.destroy();
+        }
+        
+        this.messageText = this.add.text(1024/2, 300, message, {
+            fontSize: '24px',
+            fill: '#FFFFFF',
+            backgroundColor: '#AA0000',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setDepth(1000);
+        
+        // Hide after duration
+        this.time.delayedCall(duration, () => {
+            if (this.messageText) {
+                this.messageText.destroy();
+                this.messageText = null;
             }
         });
     }
     
-    // Create or update SFX mute button
-    if (this.sfxMuteButton && this.sfxMuteButton.active) {
-        this.sfxMuteButton.setText(sfxButtonText);
-    } else {
-        this.sfxMuteButton = this.add.text(x, sfxY, sfxButtonText, {
-            fontSize: '16px',
-            fontStyle: 'bold',
-            backgroundColor: '#333',
-            padding: { x: 10, y: 5 },
-            fixedWidth: 100,
-            align: 'center'
-        }).setOrigin(0.5);
-        
-        this.sfxMuteButton.setInteractive({ useHandCursor: true });
-        
-        // Handle click event for SFX
-        this.sfxMuteButton.on('pointerup', () => {
-            const isMuted = musicManager.toggleSFXMute();
-            
-            // Update button text
-            if (this.sfxMuteButton && this.sfxMuteButton.active) {
-                this.sfxMuteButton.setText(isMuted ? 'FX OFF' : 'FX ON');
-            }
-        });
-    }
-
-    console.log('Mute buttons created successfully');
-}
     // Called when scene is shutting down
     shutdown() {
         console.log('MenuScene shutdown called');

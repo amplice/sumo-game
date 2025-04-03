@@ -30,6 +30,15 @@ export default class GameScene extends Phaser.Scene {
         
         // Flag to ensure we don't initialize animations multiple times
         this.initialized = false;
+        
+        // Add online mode properties
+        this.isOnlineMode = data.mode === 'online';
+        if (this.isOnlineMode) {
+            this.isHost = data.isHost;
+            this.lastUpdateTime = 0;
+            this.updateInterval = 50; // Send updates every 50ms
+            console.log(`Starting online game as ${this.isHost ? 'host' : 'guest'}`);
+        }
     }
 
     preload() {
@@ -104,6 +113,21 @@ this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', {
             gameConfig.ring.borderWidth, 
             gameConfig.ring.borderColor
         );
+
+        // Add online mode indicators if online
+    if (this.isOnlineMode) {
+        // Display connection status
+        this.connectionText = this.add.text(750, 20, 
+            `Online: ${this.isHost ? 'Host' : 'Guest'}`, 
+            gameConfig.ui.fonts.small
+        );
+        
+        // Set up listeners for network updates
+        this.setupNetworkListeners();
+        
+        // Start listening for disconnection
+        this.listenForDisconnection();
+    }
         
         // Create animations only if not already created
         this.createAnimations();
@@ -173,6 +197,7 @@ this.time.delayedCall(50, () => {
 
     // Add a new method to setup mobile controls
 // Update setupMobileControls in GameScene.js
+// Setup mobile controls with online functionality
 setupMobileControls() {
     console.log('Creating mobile controls');
     
@@ -194,8 +219,16 @@ setupMobileControls() {
         
         console.log('Rex plugin found:', rexPlugin);
         
-        // Create mobile controls for Player 1 - in single player, opponent is Player 2
-        this.mobileControls = new MobileControls(this, this.player1, this.player2);
+        // For online mode, only control local player
+        if (this.isOnlineMode) {
+            const localPlayer = this.isHost ? this.player1 : this.player2;
+            const remotePlayer = this.isHost ? this.player2 : this.player1;
+            
+            this.mobileControls = new MobileControls(this, localPlayer, remotePlayer);
+        } else {
+            // Regular mobile control setup for local play
+            this.mobileControls = new MobileControls(this, this.player1, this.player2);
+        }
         
         // In mobile mode, we'll make some UI adjustments
         this.adjustUIForMobile();
@@ -250,6 +283,152 @@ adjustUIForMobile() {
     } catch (e) {
         console.error('Error in adjustUIForMobile:', e);
     }
+}
+
+setupNetworkListeners() {
+    if (!this.isOnlineMode || !this.game.networking) return;
+    
+    // Set up listener for network data
+    this.game.networking.setDataHandler((data) => {
+        this.handleNetworkData(data);
+    });
+}
+
+listenForDisconnection() {
+    if (!this.isOnlineMode || !this.game.networking) return;
+    
+    this.game.networking.setDisconnectHandler(() => {
+        // Only handle if we're still in this scene
+        if (this.scene.key === 'GameScene') {
+            // Show disconnection message
+            this.showDisconnectedMessage();
+        }
+    });
+}
+
+showDisconnectedMessage() {
+    // Create an overlay with a message
+    const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
+        .setOrigin(0)
+        .setDepth(1000);
+        
+    const text = this.add.text(1024/2, 768/2 - 50, 'Connection Lost', {
+        fontSize: '36px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5).setDepth(1001);
+    
+    const subtext = this.add.text(1024/2, 768/2 + 20, 'Opponent disconnected', {
+        fontSize: '24px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5).setDepth(1001);
+    
+    // Add return button
+    const returnButton = this.add.text(1024/2, 768/2 + 100, 'Return to Menu', {
+        fontSize: '24px',
+        fill: '#FFFFFF',
+        backgroundColor: '#AA0000',
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setDepth(1001);
+    
+    returnButton.setInteractive({ useHandCursor: true });
+    returnButton.on('pointerup', () => {
+        this.scene.start('MenuScene', { message: 'Opponent disconnected' });
+    });
+}
+
+handleNetworkData(data) {
+    // Skip if round has ended
+    if (this.roundEnded) return;
+    
+    // Determine which player is remote
+    const remotePlayer = this.isHost ? this.player2 : this.player1;
+    const localPlayer = this.isHost ? this.player1 : this.player2;
+    
+    if (!remotePlayer || !localPlayer) return;
+    
+    // Handle different types of network data
+    switch (data.type) {
+        case 'playerState':
+            // Update remote player position
+            remotePlayer.x = data.x;
+            remotePlayer.y = data.y;
+            
+            // Update velocity
+            remotePlayer.sprite.body.velocity.x = data.velocityX;
+            remotePlayer.sprite.body.velocity.y = data.velocityY;
+            
+            // Update direction
+            if (remotePlayer.direction !== data.direction) {
+                remotePlayer.setDirection(data.direction);
+            }
+            
+            // Update states
+            remotePlayer.canMove = data.canMove;
+            remotePlayer.isThrowWindingUp = data.isThrowWindingUp;
+            remotePlayer.isCounterWindingUp = data.isCounterWindingUp;
+            remotePlayer.isCounterActive = data.isCounterActive;
+            break;
+            
+        case 'action':
+            // Handle action from remote player
+            switch(data.action) {
+                case 'push':
+                    if (remotePlayer.startPush()) {
+                        this.attemptPush(remotePlayer, localPlayer);
+                    }
+                    break;
+                    
+                case 'throwStart':
+                    remotePlayer.startThrow();
+                    break;
+                    
+                case 'throwComplete':
+                    if (remotePlayer.isThrowWindingUp) {
+                        remotePlayer.executeThrow();
+                        this.attemptThrow(remotePlayer, localPlayer);
+                    }
+                    break;
+                    
+                case 'counterStart':
+                    remotePlayer.startCounter();
+                    break;
+            }
+            break;
+            
+        case 'roundEnd':
+            // Remote player has triggered round end
+            this.endRound(data.winner, data.byThrow);
+            break;
+    }
+}
+sendPlayerState() {
+    if (!this.isOnlineMode || !this.game.networking) return;
+    
+    const localPlayer = this.isHost ? this.player1 : this.player2;
+    
+    if (!localPlayer) return;
+    
+    this.game.networking.sendData({
+        type: 'playerState',
+        x: localPlayer.x,
+        y: localPlayer.y,
+        velocityX: localPlayer.sprite.body.velocity.x,
+        velocityY: localPlayer.sprite.body.velocity.y,
+        direction: localPlayer.direction,
+        canMove: localPlayer.canMove,
+        isThrowWindingUp: localPlayer.isThrowWindingUp,
+        isCounterWindingUp: localPlayer.isCounterWindingUp,
+        isCounterActive: localPlayer.isCounterActive
+    });
+}
+
+sendAction(action) {
+    if (!this.isOnlineMode || !this.game.networking) return;
+    
+    this.game.networking.sendData({
+        type: 'action',
+        action: action
+    });
 }
     
     setupInputHandlers() {
@@ -711,6 +890,7 @@ this.anims.create({
     }
 
 // Update the update method to handle mobile controls
+// Update method with online functionality
 update(time, delta) {
     // Skip everything if round has already ended
     if (this.roundEnded) {
@@ -721,9 +901,54 @@ update(time, delta) {
     if (this.player1) this.player1.update(delta);
     if (this.player2) this.player2.update(delta);
     
-    // Only process gameplay if not showing winner text
-    if (!this.winnerText.visible) {
-        // Process player actions first
+    // Handle different game modes
+    if (this.isOnlineMode) {
+        // Online mode - determine which player we control
+        const localPlayer = this.isHost ? this.player1 : this.player2;
+        const remotePlayer = this.isHost ? this.player2 : this.player1;
+        
+        // Only process local player input
+        if (!window.isMobile || !window.isMobile()) {
+            this.handleOnlinePlayerActions(localPlayer, remotePlayer);
+        }
+        
+        // Update mobile controls if they exist (for local player only)
+        if (this.mobileControls) {
+            this.mobileControls.update();
+        }
+        
+        // Handle keyboard movement for local player
+        if (!window.isMobile || !window.isMobile()) {
+            if (localPlayer && localPlayer.canMove) {
+                if (this.isHost) {
+                    // Host uses WASD
+                    this.handlePlayerMovement(
+                        localPlayer,
+                        this.wasdKeys.W.isDown,
+                        this.wasdKeys.S.isDown,
+                        this.wasdKeys.A.isDown,
+                        this.wasdKeys.D.isDown
+                    );
+                } else {
+                    // Guest uses arrow keys
+                    this.handlePlayerMovement(
+                        localPlayer,
+                        this.arrowKeys.up.isDown,
+                        this.arrowKeys.down.isDown,
+                        this.arrowKeys.left.isDown,
+                        this.arrowKeys.right.isDown
+                    );
+                }
+            }
+        }
+        
+        // Send network updates periodically
+        if (time > this.lastUpdateTime + this.updateInterval) {
+            this.sendPlayerState();
+            this.lastUpdateTime = time;
+        }
+    } else {
+        // Normal offline mode
         if (!window.isMobile || !window.isMobile()) {
             // Only handle keyboard actions on non-mobile
             this.handlePlayerActions();
@@ -761,23 +986,61 @@ update(time, delta) {
                 );
             }
         }
-        
-        // Update player positions
-        if (this.player1) this.player1.updatePosition();
-        if (this.player2) this.player2.updatePosition();
-        
-        // Check if players are outside the ring
-        if (this.player1 && this.player2) {
-            if (this.checkOutOfBounds(this.player1, this.ringCenter, this.ringRadius)) {
-                this.endRound('Player 2');
-            }
-            else if (this.checkOutOfBounds(this.player2, this.ringCenter, this.ringRadius)) {
-                this.endRound('Player 1');
-            }
+    }
+    
+    // Update player positions
+    if (this.player1) this.player1.updatePosition();
+    if (this.player2) this.player2.updatePosition();
+    
+    // Check if players are outside the ring
+    if (this.player1 && this.player2) {
+        if (this.checkOutOfBounds(this.player1, this.ringCenter, this.ringRadius)) {
+            this.endRound('Player 2');
+        }
+        else if (this.checkOutOfBounds(this.player2, this.ringCenter, this.ringRadius)) {
+            this.endRound('Player 1');
         }
     }
 }
-
+handleOnlinePlayerActions(localPlayer, remotePlayer) {
+    if (!localPlayer || !remotePlayer || !this.actionKeys) return;
+    
+    // Determine which action keys to use based on host status
+    const pushKey = this.isHost ? this.actionKeys.p1Push : this.actionKeys.p2Push;
+    const throwKey = this.isHost ? this.actionKeys.p1Throw : this.actionKeys.p2Throw;
+    const counterKey = this.isHost ? this.actionKeys.p1Counter : this.actionKeys.p2Counter;
+    
+    // Push action
+    if (Phaser.Input.Keyboard.JustDown(pushKey) && localPlayer.startPush()) {
+        this.attemptPush(localPlayer, remotePlayer);
+        this.sendAction('push');
+    }
+    
+    // Throw action
+    if (Phaser.Input.Keyboard.JustDown(throwKey)) {
+        if (localPlayer.startThrow()) {
+            // Send throw start action
+            this.sendAction('throwStart');
+            
+            // Set up callback for when throw executes automatically
+            this.time.delayedCall(gameConfig.throw.windupDuration, () => {
+                if (localPlayer && localPlayer.isThrowWindingUp) {
+                    localPlayer.executeThrow();
+                    this.attemptThrow(localPlayer, remotePlayer);
+                    this.sendAction('throwComplete');
+                }
+            });
+        }
+    }
+    
+    // Counter action
+    if (Phaser.Input.Keyboard.JustDown(counterKey)) {
+        if (localPlayer.startCounter()) {
+            // Counter activates automatically after windup
+            this.sendAction('counterStart');
+        }
+    }
+}
     // Function to handle player actions
     handlePlayerActions() {
         if (!this.player1 || !this.player2 || !this.actionKeys) return;
@@ -1431,7 +1694,13 @@ update(time, delta) {
         
         // Clean up all visual effects
         this.cleanupVisualEffects();
-        
+        if (this.isOnlineMode && this.game.networking) {
+            this.game.networking.sendData({
+                type: 'roundEnd',
+                winner: winner,
+                byThrow: byThrow
+            });
+        }
         // Update win counts
         if (winner === 'Player 1') {
             this.player1Wins++;
@@ -1462,6 +1731,7 @@ update(time, delta) {
                 }
             });
         }
+        
     }
 
     createReturnButton() {
@@ -1635,6 +1905,11 @@ update(time, delta) {
         // Cancel all ongoing processes
         this.tweens.killAll();
         this.time.removeAllEvents();
+
+            // Disconnect networking if in online mode
+    if (this.isOnlineMode && this.game.networking) {
+        this.game.networking.disconnect();
+    }
         
         // Clean up mobile controls if they exist
         if (this.mobileControls) {

@@ -3,6 +3,7 @@ import MenuScene from './scenes/MenuScene';
 import GameScene from './scenes/GameScene';
 import TutorialScene from './scenes/TutorialScene';
 import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js';
+import SimpleNetworking from './networking/SimpleNetworking';
 // import TestScene from './scenes/TestScene';
 
 // Add device detection function
@@ -15,6 +16,9 @@ window.isMobile = isMobile;
 
 // Game configuration with improved scene management and responsive scaling
 const config = {
+    dom: {
+        createContainer: true
+    },
     type: Phaser.AUTO,
     // Add scale manager configuration for responsive design
     scale: {
@@ -58,14 +62,23 @@ const config = {
             console.log('Game postBoot');
             console.log('Running on mobile: ' + isMobile());
             
+            // Create a global reference for the networking
+            game.networking = null;
+            
             // Add global error handling to prevent game crashes
             window.addEventListener('error', function(e) {
                 console.error('Game error caught:', e.error);
                 // Attempt to recover by returning to menu if in an active scene
                 if (game.scene.isActive('GameScene')) {
                     console.log('Error occurred in GameScene, attempting to return to menu');
+                    
+                    // Clean up networking if it exists
+                    if (game.networking) {
+                        game.networking.disconnect();
+                    }
+                    
                     game.scene.stop('GameScene');
-                    game.scene.start('MenuScene');
+                    game.scene.start('MenuScene', { message: 'Game error occurred' });
                 }
                 // This prevents the browser from showing the error
                 e.preventDefault();
@@ -97,5 +110,12 @@ window.addEventListener('resize', function() {
     if (game) {
         // Force resize and refresh
         game.scale.refresh();
+    }
+});
+
+// Add an unload listener to make sure we clean up networking when the page closes
+window.addEventListener('beforeunload', function() {
+    if (game && game.networking) {
+        game.networking.disconnect();
     }
 });
