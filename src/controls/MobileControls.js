@@ -19,9 +19,12 @@ export default class MobileControls {
         // Create action buttons
         this.createActionButtons();
         
+        // Set up player state monitoring
+        this.previousCanMove = true;
+        this.setupPlayerStateListeners();
+        
         console.log('Mobile controls successfully created');
     }
-    
     createDebugText() {
         // Create debug text for development
         this.debugText = this.scene.add.text(10, 10, 'Joystick Debug', {
@@ -31,6 +34,79 @@ export default class MobileControls {
             fill: '#fff'
         }).setDepth(9999);
     }
+
+    // Method to set up a state change monitor
+setupPlayerStateListeners() {
+    // Check player state regularly
+    this.stateCheckTimer = this.scene.time.addEvent({
+        delay: 100, // Check every 100ms
+        callback: this.checkPlayerStateChange,
+        callbackScope: this,
+        loop: true
+    });
+}
+
+// Method to detect when the player's movement ability changes
+checkPlayerStateChange() {
+    if (!this.player) return;
+    
+    // Detect when player transitions from "can't move" to "can move"
+    const canMoveNow = this.player.canMove;
+    
+    if (canMoveNow && !this.previousCanMove) {
+        console.log('Player can move again - checking if joystick is active');
+        
+        // If joystick is still active when player can move again, resume movement
+        if (this.isJoystickActive && this.activePointerId !== null) {
+            // Safely check for active pointers
+            try {
+                // First check if input and pointers exist
+                if (!this.scene || !this.scene.input || !this.scene.input.pointers) {
+                    console.log('Input system not available');
+                    return;
+                }
+                
+                // Find the active pointer by ID, safely
+                let activePointer = null;
+                for (let i = 0; i < this.scene.input.pointers.length; i++) {
+                    const pointer = this.scene.input.pointers[i];
+                    if (pointer && pointer.id === this.activePointerId) {
+                        activePointer = pointer;
+                        break;
+                    }
+                }
+                
+                // If we found the active pointer, resume movement
+                if (activePointer && activePointer.isDown) {
+                    console.log('Joystick still active - resuming movement');
+                    this.handleJoystickMove(activePointer);
+                } else {
+                    console.log('Active pointer not found or not down');
+                    this.resetJoystick();
+                }
+            } catch (error) {
+                console.error('Error checking for active pointers:', error);
+                // Reset joystick state to prevent further issues
+                this.resetJoystick();
+            }
+        }
+    }
+    
+    // Update previous state
+    this.previousCanMove = canMoveNow;
+}
+
+// Add a safe method to reset joystick state
+resetJoystick() {
+    this.isJoystickActive = false;
+    this.activePointerId = null;
+    
+    // Reset joystick visuals if they exist
+    if (this.joystickThumb && this.joystickPos) {
+        this.joystickThumb.x = this.joystickPos.x;
+        this.joystickThumb.y = this.joystickPos.y;
+    }
+}
     
     createJoystick() {
         console.log('Creating joystick');
@@ -56,21 +132,31 @@ export default class MobileControls {
         // Track active direction
         this.activeDirection = null;
         this.isJoystickActive = false;
+        this.activePointerId = null;
         
-        // Add touch event listeners
+        // Add touch event listeners - attach them directly to the joystick area
         this.joystickArea.on('pointerdown', this.handleJoystickDown, this);
         this.joystickArea.on('pointermove', this.handleJoystickMove, this);
-        this.scene.input.on('pointerup', this.handleJoystickUp, this);
+        this.joystickArea.on('pointerout', this.handleJoystickUp, this);
+        this.joystickArea.on('pointerup', this.handleJoystickUp, this);
+        
+        // CRITICAL: Enable multi-touch in the scene
+        this.scene.input.addPointer(2); // Support at least 3 touches (default is 2)
     }
     
     handleJoystickDown(pointer) {
-        // Activate joystick
-        this.isJoystickActive = true;
-        this.handleJoystickMove(pointer);
+        // Only activate if no other pointer is controlling the joystick
+        if (!this.isJoystickActive) {
+            this.isJoystickActive = true;
+            this.activePointerId = pointer.id; // Track this pointer's ID
+            console.log(`Joystick activated with pointer ID: ${pointer.id}`);
+            this.handleJoystickMove(pointer);
+        }
     }
     
     handleJoystickMove(pointer) {
-        if (!this.isJoystickActive) return;
+        // Only respond to the pointer that activated the joystick
+        if (!this.isJoystickActive || pointer.id !== this.activePointerId) return;
         
         // Calculate direction from joystick base to pointer
         const dx = pointer.x - this.joystickPos.x;
@@ -125,10 +211,13 @@ export default class MobileControls {
         }
     }
     
-    handleJoystickUp() {
-        if (this.isJoystickActive) {
+    handleJoystickUp(pointer) {
+        // Only respond to the pointer that activated the joystick
+        if (this.isJoystickActive && pointer.id === this.activePointerId) {
+            console.log(`Joystick released with pointer ID: ${pointer.id}`);
             // Reset joystick
             this.isJoystickActive = false;
+            this.activePointerId = null;
             this.joystickThumb.x = this.joystickPos.x;
             this.joystickThumb.y = this.joystickPos.y;
             
@@ -191,14 +280,23 @@ export default class MobileControls {
         if (this.debugText) {
             this.debugText.setText(
                 `Joystick:\nDirection: ${direction}\n` +
-                `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}`
+                `Velocity: ${velocityX.toFixed(0)},${velocityY.toFixed(0)}\n` +
+                `PointerId: ${this.activePointerId}`
             );
         }
     }
     
     stopMovement() {
         if (this.player && this.activeDirection) {
+            // Stop the player's velocity
             this.player.setVelocity(0, 0);
+            
+            // Reset animation to idle
+            if (this.player.sprite && this.player.sprite.anims) {
+                this.player.sprite.anims.stop();
+                this.player.playIdleAnimation();
+            }
+            
             this.activeDirection = null;
             
             // Update debug text
@@ -213,19 +311,19 @@ export default class MobileControls {
         const buttonSpacing = 120;
         const buttonsX = this.scene.cameras.main.width - (buttonSpacing * 2);
         
-        // Create buttons with touch events
-        this.pushButton = this.createButton(buttonsX - buttonSpacing, buttonY, 'PUSH', 0x0000AA);
-        this.throwButton = this.createButton(buttonsX, buttonY, 'THROW', 0xAA5500);
-        this.counterButton = this.createButton(buttonsX + buttonSpacing, buttonY, 'COUNTER', 0xAA0000);
+        // Create buttons with touch events - slightly larger for easier touch
+        this.pushButton = this.createButton(buttonsX - buttonSpacing, buttonY, 'PUSH', 0x0000AA, 70);
+        this.throwButton = this.createButton(buttonsX, buttonY, 'THROW', 0xAA5500, 70);
+        this.counterButton = this.createButton(buttonsX + buttonSpacing, buttonY, 'COUNTER', 0xAA0000, 70);
         
         // Set up button event listeners
         this.setupButtonListeners();
     }
     
-    createButton(x, y, text, color) {
+    createButton(x, y, text, color, size = 60) {
         // Create circle for the button
-        const button = this.scene.add.circle(x, y, 60, color, 0.7)
-            .setInteractive()
+        const button = this.scene.add.circle(x, y, size, color, 0.7)
+            .setInteractive({ useHandCursor: true })
             .setDepth(100);
             
         // Add text label
@@ -240,14 +338,16 @@ export default class MobileControls {
     
     setupButtonListeners() {
         // Push button
-        this.pushButton.visual.on('pointerdown', () => {
+        this.pushButton.visual.on('pointerdown', (pointer) => {
+            console.log(`Push button pressed with pointer ID: ${pointer.id}`);
             if (this.player.startPush()) {
                 this.scene.attemptPush(this.player, this.opponent);
             }
         });
         
         // Throw button
-        this.throwButton.visual.on('pointerdown', () => {
+        this.throwButton.visual.on('pointerdown', (pointer) => {
+            console.log(`Throw button pressed with pointer ID: ${pointer.id}`);
             if (this.player.startThrow()) {
                 // Set up callback for when throw executes automatically
                 this.scene.time.delayedCall(gameConfig.throw.windupDuration, () => {
@@ -260,9 +360,27 @@ export default class MobileControls {
         });
         
         // Counter button
-        this.counterButton.visual.on('pointerdown', () => {
+        this.counterButton.visual.on('pointerdown', (pointer) => {
+            console.log(`Counter button pressed with pointer ID: ${pointer.id}`);
             this.player.startCounter();
         });
+        
+        // Add visual feedback to buttons
+        const addButtonFeedback = (button) => {
+            button.on('pointerdown', () => {
+                button.fillAlpha = 1.0; // Brighten on press
+            });
+            button.on('pointerup', () => {
+                button.fillAlpha = 0.7; // Return to normal
+            });
+            button.on('pointerout', () => {
+                button.fillAlpha = 0.7; // Return to normal if pointer leaves
+            });
+        };
+        
+        addButtonFeedback(this.pushButton.visual);
+        addButtonFeedback(this.throwButton.visual);
+        addButtonFeedback(this.counterButton.visual);
     }
     
     update() {
@@ -281,27 +399,36 @@ export default class MobileControls {
         // Destroy joystick components
         if (this.joystickBase) this.joystickBase.destroy();
         if (this.joystickThumb) this.joystickThumb.destroy();
-        if (this.joystickArea) this.joystickArea.destroy();
-        
-        // Remove event listeners
         if (this.joystickArea) {
+            // Remove all event listeners
             this.joystickArea.off('pointerdown');
             this.joystickArea.off('pointermove');
+            this.joystickArea.off('pointerout');
+            this.joystickArea.off('pointerup');
+            this.joystickArea.destroy();
         }
-        this.scene.input.off('pointerup');
         
         // Destroy action buttons
         if (this.pushButton) {
+            this.pushButton.visual.off('pointerdown');
+            this.pushButton.visual.off('pointerup');
+            this.pushButton.visual.off('pointerout');
             this.pushButton.visual.destroy();
             this.pushButton.text.destroy();
         }
         
         if (this.throwButton) {
+            this.throwButton.visual.off('pointerdown');
+            this.throwButton.visual.off('pointerup');
+            this.throwButton.visual.off('pointerout');
             this.throwButton.visual.destroy();
             this.throwButton.text.destroy();
         }
         
         if (this.counterButton) {
+            this.counterButton.visual.off('pointerdown');
+            this.counterButton.visual.off('pointerup');
+            this.counterButton.visual.off('pointerout');
             this.counterButton.visual.destroy();
             this.counterButton.text.destroy();
         }
