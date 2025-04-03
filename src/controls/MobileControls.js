@@ -39,21 +39,26 @@ export default class MobileControls {
     createJoystick() {
         console.log('Creating joystick');
         
-        // Position the joystick in the lower left
-        const baseX = 150;
-        const baseY = this.scene.cameras.main.height - 150;
+        // Position the joystick more toward the center from the lower left
+        const baseX = 200;             // Moved right from 150
+        const baseY = this.scene.cameras.main.height - 200;  // Moved up from -150
+        
+        // Further increase size of joystick components
+        const baseRadius = 150;       // Further increased from 120
+        const thumbRadius = 75;       // Further increased from 60
+        const touchAreaRadius = 220;  // Further increased from 180
         
         // Create base circle
-        this.joystickBase = this.scene.add.circle(baseX, baseY, 100, 0x888888, 0.5).setDepth(100);
+        this.joystickBase = this.scene.add.circle(baseX, baseY, baseRadius, 0x888888, 0.5).setDepth(100);
         
         // Create thumb/handle circle
-        this.joystickThumb = this.scene.add.circle(baseX, baseY, 50, 0xcccccc, 0.8).setDepth(101);
+        this.joystickThumb = this.scene.add.circle(baseX, baseY, thumbRadius, 0xcccccc, 0.8).setDepth(101);
         
         // Store joystick position
         this.joystickPos = { x: baseX, y: baseY };
         
         // Add interactive area over the joystick
-        this.joystickArea = this.scene.add.circle(baseX, baseY, 150, 0xffffff, 0.01)
+        this.joystickArea = this.scene.add.circle(baseX, baseY, touchAreaRadius, 0xffffff, 0.01)
             .setInteractive()
             .setDepth(99);
             
