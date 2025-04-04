@@ -15,7 +15,7 @@ export default class Player {
         this.direction = 'down';
         this.directionAngle = 0;
         this.color = color;
-        
+        this.isBeingPushed = false;
         // Action states
         this.canMove = true;
         this.pushCooldown = 0;

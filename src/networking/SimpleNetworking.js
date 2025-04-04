@@ -69,6 +69,7 @@ export default class SimpleNetworking {
 
     // Handle a new connection
     handleConnection(conn) {
+        console.log('New connection established');
         this.connection = conn;
         
         conn.on('open', () => {
@@ -81,16 +82,33 @@ export default class SimpleNetworking {
                 isHost: this.isHost
             });
         });
-
+    
         conn.on('data', (data) => {
+            // Only log non-playerState messages
+            if (data.type !== 'playerState') {
+                console.log('Received peer data type:', data.type);
+            }
+            
             if (this.dataHandler) {
                 this.dataHandler(data);
+            } else {
+                console.warn('No data handler set to process incoming data');
             }
         });
-
+    
         conn.on('close', () => {
             console.log('Connection closed');
             this.connected = false;
+            
+            if (this.disconnectHandler) {
+                this.disconnectHandler();
+            } else {
+                console.warn('No disconnect handler set to handle connection close');
+            }
+        });
+    
+        conn.on('error', (err) => {
+            console.error('Connection error:', err);
             
             if (this.disconnectHandler) {
                 this.disconnectHandler();
@@ -100,11 +118,26 @@ export default class SimpleNetworking {
 
     // Send data to the other player
     sendData(data) {
-        if (this.connection && this.connected) {
-            this.connection.send(data);
-            return true;
+        // Only log non-playerState messages to reduce noise
+        if (data.type !== 'playerState') {
+            console.log('Sending data type:', data.type);
         }
-        return false;
+        
+        if (this.connection && this.connected) {
+            try {
+                this.connection.send(data);
+                if (data.type !== 'playerState') {
+                    console.log('Data sent successfully');
+                }
+                return true;
+            } catch (err) {
+                console.error('Error sending data:', err);
+                return false;
+            }
+        } else {
+            console.warn('Cannot send data - not connected');
+            return false;
+        }
     }
 
     // Disconnect

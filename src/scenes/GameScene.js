@@ -27,6 +27,8 @@ export default class GameScene extends Phaser.Scene {
         this.player2 = null;
         this.ai = null;
         this.roundEnded = false;
+
+        this.isBeingPushed = false;
         
         // Flag to ensure we don't initialize animations multiple times
         this.initialized = false;
@@ -346,6 +348,11 @@ handleNetworkData(data) {
     
     if (!remotePlayer || !localPlayer) return;
     
+    // Skip position state logs but log other message types
+    if (data.type !== 'playerState') {
+        console.log('Received network data type:', data.type);
+    }
+    
     // Handle different types of network data
     switch (data.type) {
         case 'playerState':
@@ -370,19 +377,24 @@ handleNetworkData(data) {
             break;
             
         case 'action':
+            console.log(`Processing action: ${data.action}`);
+            
             // Handle action from remote player
             switch(data.action) {
                 case 'push':
+                    console.log('Remote player attempting push');
                     if (remotePlayer.startPush()) {
                         this.attemptPush(remotePlayer, localPlayer);
                     }
                     break;
                     
                 case 'throwStart':
+                    console.log('Remote player starting throw');
                     remotePlayer.startThrow();
                     break;
                     
                 case 'throwComplete':
+                    console.log('Remote player completing throw');
                     if (remotePlayer.isThrowWindingUp) {
                         remotePlayer.executeThrow();
                         this.attemptThrow(remotePlayer, localPlayer);
@@ -390,12 +402,14 @@ handleNetworkData(data) {
                     break;
                     
                 case 'counterStart':
+                    console.log('Remote player starting counter');
                     remotePlayer.startCounter();
                     break;
             }
             break;
             
         case 'roundEnd':
+            console.log('Received round end notification', data);
             // Remote player has triggered round end
             this.endRound(data.winner, data.byThrow);
             break;
@@ -425,10 +439,15 @@ sendPlayerState() {
 sendAction(action) {
     if (!this.isOnlineMode || !this.game.networking) return;
     
-    this.game.networking.sendData({
+    console.log(`Sending action: ${action}`);
+    const success = this.game.networking.sendData({
         type: 'action',
         action: action
     });
+    
+    if (!success) {
+        console.error(`Failed to send action: ${action}`);
+    }
 }
     
     setupInputHandlers() {
@@ -1310,7 +1329,6 @@ handleOnlinePlayerActions(localPlayer, remotePlayer) {
         }
     }
     
-    // Function to apply a push with visual effects
     applyPush(pusher, target, dirX, dirY, distance) {
         if (!target) return;
         
@@ -1324,14 +1342,36 @@ handleOnlinePlayerActions(localPlayer, remotePlayer) {
         const targetEndX = targetStartX + dirX * distance;
         const targetEndY = targetStartY + dirY * distance;
         
+        // Mark the target as being pushed
+        target.isBeingPushed = true;
+        
         // Animate the target being pushed
         this.tweens.add({
             targets: [target],
             x: targetEndX,
             y: targetEndY,
             duration: pushConfig.feedback.targetPushDuration,
-            ease: 'Power2'
+            ease: 'Power2',
+            onComplete: () => {
+                // Clear the pushed state when animation completes
+                if (target) {
+                    target.isBeingPushed = false;
+                }
+            }
         });
+        
+        // If this is online mode and we're pushing a local player, send the pushed state
+        if (this.isOnlineMode && 
+            ((this.isHost && target === this.player1) || 
+            (!this.isHost && target === this.player2))) {
+            
+            // Send the pushed position to the other player
+            this.game.networking.sendData({
+                type: 'pushedState',
+                x: targetEndX,
+                y: targetEndY
+            });
+        }
     }
     
     // Function to handle counter-push (when active counter counters a push)
