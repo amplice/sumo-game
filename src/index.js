@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import MenuScene from './scenes/MenuScene';
 import GameScene from './scenes/GameScene';
 import TutorialScene from './scenes/TutorialScene';
-import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js';
 import SimpleNetworking from './networking/SimpleNetworking';
 // import TestScene from './scenes/TestScene';
 
@@ -39,15 +38,6 @@ const config = {
             gravity: { y: 0 },
             debug: false
         }
-    },
-    plugins: {
-        global: [
-            { 
-                key: 'rexVirtualJoystick',
-                plugin: VirtualJoystickPlugin,
-                start: true
-            }
-        ]
     },
     scene: [MenuScene, GameScene, TutorialScene],
     // scene: [MenuScene, GameScene, TutorialScene, TestScene],

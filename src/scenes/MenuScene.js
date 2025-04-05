@@ -31,6 +31,10 @@ export default class MenuScene extends Phaser.Scene {
         if (!this.textures.exists('ring_background')) {
             this.load.image('ring_background', 'assets/sprites/sumo_ring.png');
         }
+
+            // Load the game logo
+    this.load.image('game_logo', 'assets/sprites/sumo_smackdown_logo.png');
+    
         musicManager.preloadSounds(this);
     }
 
@@ -81,15 +85,8 @@ export default class MenuScene extends Phaser.Scene {
         blueSumo.play('menu_blue_idle');
         redSumo.play('menu_red_idle');
     
-        // Add title - positioned above the ring
-        this.add.text(1024/2, 100, 'SUMO SMACKDOWN', {
-            fontSize: '64px',
-            fontStyle: 'bold',
-            fill: '#FFFFFF',
-            stroke: '#000000',
-            strokeThickness: 6,
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, stroke: true, fill: true }
-        }).setOrigin(0.5);
+        const logo = this.add.image(1024/2, 120, 'game_logo');
+            logo.setScale(0.2); // Adjust scale as needed to fit your UI
     
         // Check if we're on mobile
         const isMobileDevice = window.isMobile && window.isMobile();
