@@ -80,7 +80,7 @@ export default class MenuScene extends Phaser.Scene {
         // Play the idle animations
         blueSumo.play('menu_blue_idle');
         redSumo.play('menu_red_idle');
-
+    
         // Add title - positioned above the ring
         this.add.text(1024/2, 100, 'SUMO SMACKDOWN', {
             fontSize: '64px',
@@ -90,36 +90,48 @@ export default class MenuScene extends Phaser.Scene {
             strokeThickness: 6,
             shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 5, stroke: true, fill: true }
         }).setOrigin(0.5);
-
+    
+        // Check if we're on mobile
+        const isMobileDevice = window.isMobile && window.isMobile();
+    
         // Create buttons with better spacing and consistent sizing
-        this.createButton(1024/2, 260, 'Two Player', 250, 50, () => {
-            this.safeStartScene('GameScene', { mode: 'twoPlayer' });
-        });
-
-        // Single Player button (with difficulty display)
-        this.singlePlayerButton = this.createButton(1024/2, 330, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, 250, 50, () => {
+        let buttonY = 260;
+        
+        // Online play buttons - moved up to where the two player button was
+        this.createOnlineButtons(buttonY);
+        buttonY += 70;
+        
+        // Single Player button (with difficulty display) - moved down
+        this.singlePlayerButton = this.createButton(1024/2, buttonY, `Single Player (${this.formatDifficulty(this.selectedDifficulty)})`, 250, 50, () => {
             this.safeStartScene('GameScene', { 
                 mode: 'singlePlayer',
                 difficulty: this.selectedDifficulty
             });
         });
-
+        buttonY += 70;
+        
         // Difficulty selection buttons with better spacing and consistent sizing
         this.createDifficultyButtons();
+        buttonY += 70;
         
-        // Create online play buttons
-        this.createOnlineButtons();
-
-        this.createButton(1024/2, 520, 'How to Play', 250, 50, () => {
+        // Only show Two Player option for non-mobile
+        if (!isMobileDevice) {
+            this.createButton(1024/2, buttonY, 'Two Player', 250, 50, () => {
+                this.safeStartScene('GameScene', { mode: 'twoPlayer' });
+            });
+            buttonY += 70;
+        }
+    
+        this.createButton(1024/2, buttonY, 'How to Play', 250, 50, () => {
             this.safeStartScene('TutorialScene');
         });
         
         // Set current scene in music manager
         musicManager.setScene(this);
-
+    
         // Play background music
         musicManager.playMusic(this, 'nonbattle_music');
-
+    
         // Create mute buttons with a short delay to ensure scene is ready
         this.time.delayedCall(50, () => {
             this.createMuteButton();
@@ -135,53 +147,60 @@ export default class MenuScene extends Phaser.Scene {
         console.log('MenuScene create completed');
     }
     
-    createOnlineButtons() {
-        // Create network manager if it doesn't exist
+    
+// Also update the createOnlineButtons method to accept a Y-coordinate parameter
+createOnlineButtons(buttonY) {
+    // Create network manager if it doesn't exist
+    if (!this.game.networking) {
+        this.game.networking = new SimpleNetworking(this.game);
+        this.networkingInitialized = false;
+    }
+    
+    // Host Game button
+    this.createButton(1024/2 - 120, buttonY, 'Host Game', 200, 50, () => {
+        this.initNetworkingIfNeeded(() => {
+            const roomId = this.game.networking.hostGame();
+            this.showRoomCode(roomId);
+        });
+    });
+    
+    // Join Game button
+    this.createButton(1024/2 + 120, buttonY, 'Join Game', 200, 50, () => {
+        this.initNetworkingIfNeeded(() => {
+            this.promptForRoomCode();
+        });
+    });
+}
+    
+initNetworkingIfNeeded(callback) {
+    if (!this.networkingInitialized) {
+        this.showMessage('Initializing network...');
+        
+        // Create networking instance if needed
         if (!this.game.networking) {
             this.game.networking = new SimpleNetworking(this.game);
-            this.networkingInitialized = false;
         }
         
-        // Host Game button
-        this.createButton(1024/2 - 120, 400, 'Host Game', 200, 50, () => {
-            this.initNetworkingIfNeeded(() => {
-                const roomId = this.game.networking.hostGame();
-                this.showRoomCode(roomId);
-            });
-        });
-        
-        // Join Game button
-        this.createButton(1024/2 + 120, 400, 'Join Game', 200, 50, () => {
-            this.initNetworkingIfNeeded(() => {
-                this.promptForRoomCode();
-            });
-        });
-    }
-    
-    initNetworkingIfNeeded(callback) {
-        if (!this.networkingInitialized) {
-            this.showMessage('Initializing network...');
-            
-            // Create networking instance if needed
-            if (!this.game.networking) {
-                this.game.networking = new SimpleNetworking(this.game);
-            }
-            
-            this.game.networking.initialize()
-                .then(() => {
-                    this.networkingInitialized = true;
-                    callback();
-                })
-                .catch(err => {
-                    console.error('Failed to initialize networking:', err);
-                    this.showMessage('Network error. Try again.');
-                });
-        } else {
-            callback();
+        // Make sure the networking instance is in a clean state
+        if (this.game.networking.peer) {
+            this.game.networking.disconnect();
+            this.game.networking = new SimpleNetworking(this.game);
         }
+        
+        this.game.networking.initialize()
+            .then(() => {
+                this.networkingInitialized = true;
+                callback();
+            })
+            .catch(err => {
+                console.error('Failed to initialize networking:', err);
+                this.showMessage('Network error. Try again.');
+            });
+    } else {
+        callback();
     }
+}
     
-    // Show room code for host
 // Show room code for host
 showRoomCode(roomId) {
     // Create a modal display with the room code
@@ -218,7 +237,17 @@ showRoomCode(roomId) {
     }).setOrigin(0.5);
     
     const cancelButton = this.createButton(1024/2, 768/2 + 120, 'Cancel', 150, 40, () => {
-        this.game.networking.disconnect();
+        if (this.game.networking) {
+            this.game.networking.disconnect();
+            
+            // Reset the networking initialization flag so it gets reinitialized next time
+            this.networkingInitialized = false;
+            
+            // Optional: Recreate the networking instance to ensure a clean state
+            this.game.networking = new SimpleNetworking(this.game);
+        }
+        
+        // Clean up UI elements
         overlay.destroy();
         panel.destroy();
         titleText.destroy();
@@ -275,6 +304,7 @@ promptForRoomCode() {
     
     // Create HTML input for mobile devices
     let inputElement = null;
+    let keyboardListener = null;
     
     if (isMobileDevice) {
         // Create an HTML input element for mobile
@@ -306,7 +336,7 @@ promptForRoomCode() {
         });
     } else {
         // Desktop keyboard input
-        const keyboardListener = this.input.keyboard.on('keydown', (event) => {
+        keyboardListener = this.input.keyboard.on('keydown', (event) => {
             // Handle backspace
             if (event.key === 'Backspace') {
                 inputCode = inputCode.slice(0, -1);
@@ -328,9 +358,9 @@ promptForRoomCode() {
             if (isMobileDevice && inputElement) {
                 document.body.removeChild(inputElement);
                 inputElement = null;
-            } else if (this.input.keyboard.listeners) {
-                // Remove keyboard listener for desktop
-                this.input.keyboard.removeAllListeners('keydown');
+            } else if (keyboardListener) {
+                this.input.keyboard.removeListener('keydown', keyboardListener);
+                keyboardListener = null;
             }
             
             // Attempt to join the game
@@ -358,9 +388,16 @@ promptForRoomCode() {
         if (isMobileDevice && inputElement) {
             document.body.removeChild(inputElement);
             inputElement = null;
-        } else if (this.input.keyboard.listeners) {
-            // Remove keyboard listener for desktop
-            this.input.keyboard.removeAllListeners('keydown');
+        } else if (keyboardListener) {
+            this.input.keyboard.removeListener('keydown', keyboardListener);
+            keyboardListener = null;
+        }
+        
+        // Reset networking flag to ensure proper reinitialization
+        if (this.game.networking) {
+            this.game.networking.disconnect();
+            this.networkingInitialized = false;
+            this.game.networking = new SimpleNetworking(this.game);
         }
         
         // Clean up UI elements
@@ -435,41 +472,42 @@ promptForRoomCode() {
         return { button, text: buttonText };
     }
     
-    createDifficultyButtons() {
-        const y = 460;
-        const spacing = 110;
-        const difficulties = ['easy', 'medium', 'hard'];
-        this.difficultyButtons = {};
+// Update createDifficultyButtons to maintain positioning
+createDifficultyButtons() {
+    const y = 400; // Adjust this Y position to match the new position after Single Player
+    const spacing = 110;
+    const difficulties = ['easy', 'medium', 'hard'];
+    this.difficultyButtons = {};
+    
+    difficulties.forEach((difficulty, index) => {
+        const x = 1024/2 + (index - 1) * spacing;
+        const color = (difficulty === this.selectedDifficulty) ? 
+                      0x00AA00 : // Green for selected
+                      0x555555;  // Gray for unselected
         
-        difficulties.forEach((difficulty, index) => {
-            const x = 1024/2 + (index - 1) * spacing;
-            const color = (difficulty === this.selectedDifficulty) ? 
-                          0x00AA00 : // Green for selected
-                          0x555555;  // Gray for unselected
+        const width = 100;
+        const height = 40;
+                      
+        const button = this.add.rectangle(x, y, width, height, color)
+            .setStrokeStyle(2, 0xFFFFFF);
             
-            const width = 100;
-            const height = 40;
-                          
-            const button = this.add.rectangle(x, y, width, height, color)
-                .setStrokeStyle(2, 0xFFFFFF);
-                
-            // Make sure we don't have duplicate listeners
-            button.removeAllListeners('pointerup');
+        // Make sure we don't have duplicate listeners
+        button.removeAllListeners('pointerup');
+        
+        button.setInteractive({ useHandCursor: true })
+            .on('pointerup', () => {
+                this.setDifficulty(difficulty);
+            });
             
-            button.setInteractive({ useHandCursor: true })
-                .on('pointerup', () => {
-                    this.setDifficulty(difficulty);
-                });
-                
-            const text = this.add.text(x, y, this.formatDifficulty(difficulty), {
-                fontSize: '18px',
-                fill: '#FFFFFF',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-            
-            this.difficultyButtons[difficulty] = { button, text };
-        });
-    }
+        const text = this.add.text(x, y, this.formatDifficulty(difficulty), {
+            fontSize: '18px',
+            fill: '#FFFFFF',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+        
+        this.difficultyButtons[difficulty] = { button, text };
+    });
+}
     
     setDifficulty(difficulty) {
         // Update the previous selected button
