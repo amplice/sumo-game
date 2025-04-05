@@ -87,6 +87,19 @@ this.load.spritesheet('counter_attack', 'assets/sprites/counter_sprites.png', {
         });
     }
 
+    createDebugIndicator() {
+        if (!this.isOnlineMode) return;
+        
+        this.debugText = this.add.text(10, this.cameras.main.height - 50, 'Network Status: OK', {
+            fontSize: '12px',
+            backgroundColor: '#000000',
+            padding: { x: 5, y: 5 },
+            fill: '#00FF00'
+        });
+        
+        this.actionIndicator = this.add.circle(30, this.cameras.main.height - 80, 10, 0x00FF00, 0.5);
+    }
+
     create() {
         console.log('GameScene create called');
         
@@ -193,6 +206,7 @@ this.time.delayedCall(50, () => {
  
  this.initialized = true;
  this.roundEnded = false;
+ this.createDebugIndicator();
  
  console.log('GameScene create completed');
     }
@@ -379,26 +393,38 @@ handleNetworkData(data) {
         case 'action':
             console.log(`Processing action: ${data.action}`);
             
+            // Flash indicator when action is received
+            if (this.actionIndicator) {
+                this.actionIndicator.setFillStyle(0xFF0000, 1);
+                this.tweens.add({
+                    targets: this.actionIndicator,
+                    alpha: 0.5,
+                    duration: 300
+                });
+                
+                this.debugText.setText(`Received action: ${data.action}`);
+                this.debugText.setFill('#FF0000');
+            }
+            
             // Handle action from remote player
             switch(data.action) {
                 case 'push':
                     console.log('Remote player attempting push');
-                    if (remotePlayer.startPush()) {
-                        this.attemptPush(remotePlayer, localPlayer);
-                    }
+                    // Force push to always work by calling directly rather than using startPush
+                    this.forcePushFromRemote(remotePlayer, localPlayer);
                     break;
                     
                 case 'throwStart':
                     console.log('Remote player starting throw');
+                    // Force throw start
                     remotePlayer.startThrow();
                     break;
                     
                 case 'throwComplete':
                     console.log('Remote player completing throw');
-                    if (remotePlayer.isThrowWindingUp) {
-                        remotePlayer.executeThrow();
-                        this.attemptThrow(remotePlayer, localPlayer);
-                    }
+                    // Force throw completion
+                    remotePlayer.executeThrow();
+                    this.forceThrowFromRemote(remotePlayer, localPlayer);
                     break;
                     
                 case 'counterStart':
@@ -415,6 +441,9 @@ handleNetworkData(data) {
             break;
     }
 }
+
+
+
 sendPlayerState() {
     if (!this.isOnlineMode || !this.game.networking) return;
     
@@ -445,8 +474,25 @@ sendAction(action) {
         action: action
     });
     
+    // Flash indicator when action is sent
+    if (this.actionIndicator) {
+        this.actionIndicator.setFillStyle(0x00FF00, 1);
+        this.tweens.add({
+            targets: this.actionIndicator,
+            alpha: 0.5,
+            duration: 300
+        });
+        
+        this.debugText.setText(`Sent action: ${action}`);
+        this.debugText.setFill('#00FF00');
+    }
+    
     if (!success) {
         console.error(`Failed to send action: ${action}`);
+        if (this.debugText) {
+            this.debugText.setText(`Failed: ${action}`);
+            this.debugText.setFill('#FF0000');
+        }
     }
 }
     
@@ -1630,6 +1676,392 @@ handleOnlinePlayerActions(localPlayer, remotePlayer) {
         
         return false;
     }
+
+    // Add these new methods for forced remote actions
+// Fix for forcePushFromRemote method
+forcePushFromRemote(pusher, target) {
+    console.log("Checking remote push conditions");
+    
+    // Calculate push direction vector based on pusher's facing direction
+    let pushDirX = 0;
+    let pushDirY = 0;
+    
+    // Set push direction based on pusher's current direction
+    switch (pusher.direction) {
+        case 'up': pushDirX = 0; pushDirY = -1; break;
+        case 'down': pushDirX = 0; pushDirY = 1; break;
+        case 'left': pushDirX = -1; pushDirY = 0; break;
+        case 'right': pushDirX = 1; pushDirY = 0; break;
+        case 'up-left': pushDirX = -0.707; pushDirY = -0.707; break;
+        case 'up-right': pushDirX = 0.707; pushDirY = -0.707; break;
+        case 'down-left': pushDirX = -0.707; pushDirY = 0.707; break;
+        case 'down-right': pushDirX = 0.707; pushDirY = 0.707; break;
+    }
+    
+    const pushConfig = gameConfig.push;
+    
+    // Calculate distance and check if in range, similar to attemptPush
+    const startX = pusher.x;
+    const startY = pusher.y;
+    const dx = target.x - startX;
+    const dy = target.y - startY;
+    
+    // Calculate the projection of the target onto the push direction vector
+    const projection = dx * pushDirX + dy * pushDirY;
+    
+    // Calculate perpendicular distance from the center line
+    const perpDist = Math.abs(dx * pushDirY - dy * pushDirX);
+    
+    // Check if within the rectangle (in front of pusher, within width/2 of center line, within range)
+    const hitSuccessful = (projection > 0) && (projection <= pushConfig.range) && (perpDist <= pushConfig.width/2);
+    
+    // Always play the animation
+    pusher.playPushAnimation();
+    
+    // Create push visual effects
+    const angle = Math.atan2(pushDirY, pushDirX) * (180 / Math.PI);
+    
+    // Calculate offset for the push attack sprite
+    const characterOffset = 15;
+    const spriteStartX = pusher.x + (pushDirX * characterOffset);
+    const spriteStartY = pusher.y + (pushDirY * characterOffset);
+    
+    // Create the push attack sprite
+    const pushAttack = this.add.sprite(spriteStartX, spriteStartY, 'push_attack');
+    pushAttack.setOrigin(0, 0.5);
+    pushAttack.angle = angle;
+    pushAttack.play('push_attack_anim');
+    
+    // Remove the sprite when animation completes
+    pushAttack.on('animationcomplete', () => {
+        pushAttack.destroy();
+    });
+    
+    // Only apply the push effect if the hit is successful
+    if (hitSuccessful) {
+        console.log("Remote push hit successful");
+        
+        // Play push hit sound
+        musicManager.playSFX(this, 'push_hit');
+        
+        // Check if target is in counter state
+        if (target.isCounterActive) {
+            // Handle counter push logic (similar to counterPush method)
+            const counterFeedback = gameConfig.counter.feedback;
+            
+            // Visual effect for counter
+            const counterFlash = this.add.circle(
+                target.x, 
+                target.y, 
+                counterFeedback.counterFlashSize, 
+                counterFeedback.counterFlashColor, 
+                counterFeedback.counterFlashAlpha
+            );
+            
+            // Flash and expand
+            this.tweens.add({
+                targets: counterFlash,
+                scale: counterFeedback.counterFlashScale,
+                alpha: 0,
+                duration: counterFeedback.counterFlashDuration,
+                onComplete: () => {
+                    if (counterFlash && counterFlash.active) {
+                        counterFlash.destroy();
+                    }
+                }
+            });
+            
+            // Create lightning effect
+            const lightning = this.add.graphics();
+            lightning.lineStyle(4, 0xFFFF00, 1);
+            lightning.lineBetween(target.x, target.y, pusher.x, pusher.y);
+            
+            // Flash the lightning
+            this.tweens.add({
+                targets: lightning,
+                alpha: 0,
+                duration: 500,
+                onComplete: () => {
+                    if (lightning && lightning.active) {
+                        lightning.destroy();
+                    }
+                }
+            });
+            
+            // Apply reverse push to the original pusher
+            const pusherStartX = pusher.x;
+            const pusherStartY = pusher.y;
+            const pusherEndX = pusherStartX - pushDirX * pushConfig.distance * 1.5;
+            const pusherEndY = pusherStartY - pushDirY * pushConfig.distance * 1.5;
+            
+            this.tweens.add({
+                targets: [pusher],
+                x: pusherEndX,
+                y: pusherEndY,
+                duration: pushConfig.feedback.targetPushDuration,
+                ease: 'Power2'
+            });
+            
+            return;
+        }
+        
+        // If target is winding up for a throw or counter, cancel
+        if (target.isThrowWindingUp) {
+            target.cancelThrow();
+        }
+        if (target.isCounterWindingUp) {
+            target.cancelCounter();
+            
+            // Extra pushback during counter windup
+            const extraFactor = 1.5;
+            
+            // Calculate push destination
+            const targetStartX = target.x;
+            const targetStartY = target.y;
+            const targetEndX = targetStartX + pushDirX * pushConfig.distance * extraFactor;
+            const targetEndY = targetStartY + pushDirY * pushConfig.distance * extraFactor;
+            
+            // Animate the target being pushed
+            this.tweens.add({
+                targets: [target],
+                x: targetEndX,
+                y: targetEndY,
+                duration: pushConfig.feedback.targetPushDuration,
+                ease: 'Power2'
+            });
+            
+            return;
+        }
+        
+        // Normal push - apply push effect
+        const targetStartX = target.x;
+        const targetStartY = target.y;
+        const targetEndX = targetStartX + pushDirX * pushConfig.distance;
+        const targetEndY = targetStartY + pushDirY * pushConfig.distance;
+        
+        // Animate the target being pushed
+        this.tweens.add({
+            targets: [target],
+            x: targetEndX,
+            y: targetEndY,
+            duration: pushConfig.feedback.targetPushDuration,
+            ease: 'Power2'
+        });
+    } else {
+        console.log("Remote push missed - target not in range or angle");
+    }
+}
+
+forceThrowFromRemote(thrower, target) {
+    console.log("Checking remote throw conditions");
+    
+    // Direction vectors for each direction (same as in attemptThrow)
+    const directionVectors = {
+        'up': { x: 0, y: -1 },
+        'up-right': { x: 0.7071, y: -0.7071 },
+        'right': { x: 1, y: 0 },
+        'down-right': { x: 0.7071, y: 0.7071 },
+        'down': { x: 0, y: 1 },
+        'down-left': { x: -0.7071, y: 0.7071 },
+        'left': { x: -1, y: 0 },
+        'up-left': { x: -0.7071, y: -0.7071 }
+    };
+    
+    // Get direction vector
+    const dirVector = directionVectors[thrower.direction];
+    
+    // Calculate dx/dy and distance
+    const dx = target.x - thrower.x;
+    const dy = target.y - thrower.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    const throwConfig = gameConfig.throw;
+    const counterFeedback = gameConfig.counter.feedback;
+    
+    // Check if in range
+    if (distance > throwConfig.range) {
+        console.log("Remote throw missed - target too far away");
+        return false;
+    }
+    
+    // Normalize the vector to target
+    const targetVector = {
+        x: dx / distance,
+        y: dy / distance
+    };
+    
+    // Calculate dot product (measures how aligned the vectors are)
+    const dotProduct = dirVector.x * targetVector.x + dirVector.y * targetVector.y;
+    
+    // Define cone angle - use cosine of half the angle
+    const coneAngleCosine = Math.cos(Math.PI * throwConfig.angle / 180 / 2);
+    
+    // Check if within the throw cone (cos(angle) > cos(cone half-angle) means angle < cone half-angle)
+    if (dotProduct > coneAngleCosine) {
+        console.log("Remote throw hit successful");
+        
+        // Check if target is currently in counter active state
+        if (target.isCounterActive) {
+            console.log("Remote throw countered");
+            
+            // Visual effect for counter - bright flash around target
+            const counterFlash = this.add.circle(
+                target.x, 
+                target.y, 
+                counterFeedback.counterFlashSize, 
+                counterFeedback.counterFlashColor, 
+                counterFeedback.counterFlashAlpha
+            );
+            
+            // Flash and expand
+            this.tweens.add({
+                targets: counterFlash,
+                scale: counterFeedback.counterFlashScale,
+                alpha: 0,
+                duration: counterFeedback.counterFlashDuration,
+                onComplete: () => {
+                    if (counterFlash && counterFlash.active) {
+                        counterFlash.destroy();
+                    }
+                }
+            });
+            
+            // Create lightning effect between players
+            const lightning = this.add.graphics();
+            lightning.lineStyle(
+                counterFeedback.lightningWidth, 
+                counterFeedback.lightningColor, 
+                1
+            );
+            
+            // Zigzag line for lightning effect
+            const segments = counterFeedback.lightningSegments;
+            const points = [];
+            points.push({ x: target.x, y: target.y });
+            
+            for (let i = 1; i < segments; i++) {
+                const t = i / segments;
+                const midX = target.x + (thrower.x - target.x) * t;
+                const midY = target.y + (thrower.y - target.y) * t;
+                const offset = counterFeedback.lightningOffset * 
+                              (Math.random() > 0.5 ? 1 : -1) * (1 - t);
+                
+                points.push({
+                    x: midX + offset * (dy / distance),
+                    y: midY - offset * (dx / distance)
+                });
+            }
+            
+            points.push({ x: thrower.x, y: thrower.y });
+            
+            // Draw the lightning
+            lightning.beginPath();
+            lightning.moveTo(points[0].x, points[0].y);
+            
+            for (let i = 1; i < points.length; i++) {
+                lightning.lineTo(points[i].x, points[i].y);
+            }
+            
+            lightning.strokePath();
+            
+            // Flash the lightning
+            this.tweens.add({
+                targets: lightning,
+                alpha: 0,
+                duration: counterFeedback.lightningDuration,
+                onComplete: () => {
+                    if (lightning && lightning.active) {
+                        lightning.destroy();
+                    }
+                }
+            });
+            
+            // End the counter state
+            target.endCounter();
+            
+            // Make thrower spin to show being thrown
+            if (thrower.sprite) {
+                this.tweens.add({
+                    targets: thrower.sprite,
+                    scale: gameConfig.player.spriteScale * 1.25, // Scale up by 25% from base scale
+                    angle: 360,
+                    duration: throwConfig.feedback.spinDuration,
+                    onComplete: () => {
+                        if (thrower && thrower.sprite) {
+                            thrower.sprite.setScale(gameConfig.player.spriteScale); // Use config value
+                            thrower.sprite.angle = 0;
+                            
+                            // End round with counter victory
+                            const winner = target === this.player1 ? 'Player 1' : 'Player 2';
+                            this.endRound(winner, true);
+                        }
+                    }
+                });
+            }
+            
+            return true;
+        }
+        
+        // Normal throw success
+        
+        // Make the thrower flash
+        if (thrower.sprite) {
+            this.tweens.add({
+                targets: thrower.sprite,
+                alpha: throwConfig.feedback.flashAlpha,
+                duration: throwConfig.feedback.flashDuration,
+                yoyo: true,
+                repeat: 1
+            });
+        }
+        
+        // Make target spin to show being thrown
+        if (target.sprite) {
+            this.tweens.add({
+                targets: target.sprite,
+                scale: gameConfig.player.spriteScale * 1.25,
+                angle: 360,
+                duration: throwConfig.feedback.spinDuration,
+                onComplete: () => {
+                    if (target && target.sprite) {
+                        target.sprite.setScale(gameConfig.player.spriteScale);
+                        target.sprite.angle = 0;
+                        
+                        // End the round
+                        const winner = thrower === this.player1 ? 'Player 1' : 'Player 2';
+                        this.endRound(winner, true);
+                    }
+                }
+            });
+        }
+        
+        // Display throw effect line
+        const graphics = this.add.graphics();
+        graphics.lineStyle(
+            throwConfig.feedback.lineWidth, 
+            throwConfig.feedback.lineColor, 
+            1
+        );
+        graphics.lineBetween(thrower.x, thrower.y, target.x, target.y);
+        
+        // Fade out the line
+        this.tweens.add({
+            targets: graphics,
+            alpha: 0,
+            duration: throwConfig.feedback.lineFadeDuration,
+            onComplete: () => {
+                if (graphics && graphics.active) {
+                    graphics.destroy();
+                }
+            }
+        });
+        
+        return true;
+    } else {
+        console.log("Remote throw missed - target not in cone angle");
+        return false;
+    }
+}
     
     // Method to clean up all visual effects
     cleanupVisualEffects() {

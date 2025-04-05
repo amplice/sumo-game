@@ -235,82 +235,35 @@ export default class MenuScene extends Phaser.Scene {
             fill: '#FFFFFF'
         }).setOrigin(0.5);
         
-        // Create a more direct HTML input that works better with focus
+        // Use Phaser's DOM element to create an input box
         const element = this.add.dom(1024/2, 768/2).createFromHTML(`
-            <div style="width: 100%; text-align: center;">
-                <input type="text" id="roomCode" placeholder="Enter code here" 
-                       style="width: 300px; padding: 10px; font-size: 18px; text-align: center; border: none; outline: none;">
-            </div>
+            <input type="text" id="roomCode" style="width: 300px; padding: 10px; font-size: 18px; text-align: center;">
         `);
-        
-        // Focus the input field immediately
-        element.addListener('added', () => {
-            document.getElementById('roomCode').focus();
-        });
-        
-        // Create a simpler text field alternative if DOM isn't working well
-        const instructionText = this.add.text(1024/2, 768/2 + 30, 
-            'Type the room code then click Join', 
-            { fontSize: '16px', fill: '#aaaaaa' }
-        ).setOrigin(0.5);
-        
-        // Variable to store typed text in case DOM input isn't working
-        let manualInputText = '';
-        
-        // Add a keyboard listener for the entire scene
-        const keyboardListener = this.input.keyboard.on('keydown', (event) => {
-            // If it's a letter, number, or dash, add it to the input
-            if (/^[a-zA-Z0-9-]$/.test(event.key)) {
-                manualInputText += event.key;
-                document.getElementById('roomCode').value = manualInputText;
-            } 
-            // Handle backspace
-            else if (event.key === 'Backspace') {
-                manualInputText = manualInputText.slice(0, -1);
-                document.getElementById('roomCode').value = manualInputText;
-            }
-        });
         
         // Join button
         const joinButton = this.createButton(1024/2, 768/2 + 80, 'Join', 150, 40, () => {
-            // Try to get the value from the DOM input first
-            let inputElement = document.getElementById('roomCode');
-            let roomId = (inputElement && inputElement.value) ? inputElement.value.trim() : manualInputText.trim();
+            const input = document.getElementById('roomCode');
+            const roomId = input.value.trim();
             
             if (roomId) {
-                // Remove the keyboard listener
-                if (keyboardListener) {
-                    this.input.keyboard.removeListener('keydown', keyboardListener);
-                }
-                
                 this.game.networking.joinGame(roomId);
                 
                 // Show connecting message
                 titleText.setText('Connecting...');
                 element.setVisible(false);
-                instructionText.setVisible(false);
                 joinButton.button.setVisible(false);
                 joinButton.text.setVisible(false);
                 cancelButton.button.setVisible(false);
                 cancelButton.text.setVisible(false);
-            } else {
-                // Show error if no room code entered
-                instructionText.setText('Please enter a room code').setStyle({ fill: '#ff0000' });
             }
         });
         
         // Cancel button
         const cancelButton = this.createButton(1024/2, 768/2 + 140, 'Cancel', 150, 40, () => {
-            // Remove the keyboard listener
-            if (keyboardListener) {
-                this.input.keyboard.removeListener('keydown', keyboardListener);
-            }
-            
             overlay.destroy();
             panel.destroy();
             titleText.destroy();
             element.destroy();
-            instructionText.destroy();
             joinButton.button.destroy();
             joinButton.text.destroy();
             cancelButton.button.destroy();

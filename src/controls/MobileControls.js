@@ -195,17 +195,32 @@ export default class MobileControls {
         this.pushButton.visual.on('pointerdown', () => {
             if (this.player.startPush()) {
                 this.scene.attemptPush(this.player, this.opponent);
+                
+                // Add this to send push action if in online mode
+                if (this.scene.isOnlineMode) {
+                    this.scene.sendAction('push');
+                }
             }
         });
         
         // Throw button
         this.throwButton.visual.on('pointerdown', () => {
             if (this.player.startThrow()) {
+                // Add this to send throw start action if in online mode
+                if (this.scene.isOnlineMode) {
+                    this.scene.sendAction('throwStart');
+                }
+                
                 // Set up callback for when throw executes automatically
                 this.scene.time.delayedCall(gameConfig.throw.windupDuration, () => {
                     if (this.player && this.player.isThrowWindingUp) {
                         this.player.executeThrow();
                         this.scene.attemptThrow(this.player, this.opponent);
+                        
+                        // Add this to send throw complete action if in online mode
+                        if (this.scene.isOnlineMode) {
+                            this.scene.sendAction('throwComplete');
+                        }
                     }
                 });
             }
@@ -213,7 +228,12 @@ export default class MobileControls {
         
         // Counter button
         this.counterButton.visual.on('pointerdown', () => {
-            this.player.startCounter();
+            if (this.player.startCounter()) {
+                // Add this to send counter start action if in online mode
+                if (this.scene.isOnlineMode) {
+                    this.scene.sendAction('counterStart');
+                }
+            }
         });
     }
     

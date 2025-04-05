@@ -7,7 +7,7 @@ export default class Player {
         
         // Create the main sprite 
         this.sprite = scene.physics.add.sprite(x, y, spriteKey, 'down_idle');
-        this.sprite.setScale(gameConfig.player.spriteScale); // Use config value
+        this.sprite.setScale(gameConfig.player.spriteScale);
         this.sprite.body.setCircle(gameConfig.player.hitboxSize / 2, 
             this.sprite.width / 2 - gameConfig.player.hitboxSize / 2,
             this.sprite.height / 2 - gameConfig.player.hitboxSize / 2);
@@ -15,10 +15,13 @@ export default class Player {
         this.direction = 'down';
         this.directionAngle = 0;
         this.color = color;
-        this.isBeingPushed = false;
+        
         // Action states
         this.canMove = true;
         this.pushCooldown = 0;
+        
+        // Add a flag to track when player is being pushed or forced to move
+        this.isBeingForced = false;
         
         // Throw-related properties
         this.isThrowWindingUp = false;
