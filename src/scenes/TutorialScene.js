@@ -77,6 +77,7 @@ export default class TutorialScene extends Phaser.Scene {
             "",
             "Player 1:  Movement: W,A,S,D  |  Push: SPACE  |  Throw: SHIFT  |  Counter: C",
             "Player 2:  Movement: Arrow Keys  |  Push: Numpad 0  |  Throw: Numpad 1  |  Counter: Numpad 2",
+            "Online Mode: Both players use Player 1 controls (W,A,S,D, SPACE, SHIFT, C)",  // Add this line
             "",
             "RULES:",
             "- Push your opponent out of the ring",

@@ -182,81 +182,130 @@ export default class MenuScene extends Phaser.Scene {
     }
     
     // Show room code for host
-    showRoomCode(roomId) {
-        // Create a modal display with the room code
-        const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
-            .setOrigin(0)
-            .setInteractive();
-        
-        const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
-            .setStrokeStyle(2, 0xFFFFFF);
-        
-        const titleText = this.add.text(1024/2, 768/2 - 100, 'Share this code:', {
-            fontSize: '24px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
-        // Display the code in a larger, more readable format
-        const codeText = this.add.text(1024/2, 768/2, roomId, {
-            fontSize: '48px',
-            fontStyle: 'bold',
-            fill: '#FFFF00',
-            backgroundColor: '#000000',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5);
-        
-        const infoText = this.add.text(1024/2, 768/2 + 60, 'Waiting for opponent...', {
-            fontSize: '20px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
-        const cancelButton = this.createButton(1024/2, 768/2 + 120, 'Cancel', 150, 40, () => {
-            this.game.networking.disconnect();
-            overlay.destroy();
-            panel.destroy();
-            titleText.destroy();
-            codeText.destroy();
-            infoText.destroy();
-            cancelButton.button.destroy();
-            cancelButton.text.destroy();
-        });
-    }
+// Show room code for host
+showRoomCode(roomId) {
+    // Create a modal display with the room code
+    const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
+        .setOrigin(0)
+        .setInteractive();
+    
+    const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
+        .setStrokeStyle(2, 0xFFFFFF);
+    
+    const titleText = this.add.text(1024/2, 768/2 - 100, 'Share this code:', {
+        fontSize: '24px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5);
+    
+    // Display the code in a larger, more readable format
+    const codeText = this.add.text(1024/2, 768/2, roomId, {
+        fontSize: '48px',
+        fontStyle: 'bold',
+        fill: '#FFFF00',
+        backgroundColor: '#000000',
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5);
+    
+    const infoText = this.add.text(1024/2, 768/2 + 60, 'Waiting for opponent...', {
+        fontSize: '20px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5);
+    
+    // Add control reminder
+    const controlText = this.add.text(1024/2, 768/2 + 90, 'Both players use W,A,S,D and Space/Shift/C controls', {
+        fontSize: '14px',
+        fill: '#FFFF00'
+    }).setOrigin(0.5);
+    
+    const cancelButton = this.createButton(1024/2, 768/2 + 120, 'Cancel', 150, 40, () => {
+        this.game.networking.disconnect();
+        overlay.destroy();
+        panel.destroy();
+        titleText.destroy();
+        codeText.destroy();
+        infoText.destroy();
+        controlText.destroy();
+        cancelButton.button.destroy();
+        cancelButton.text.destroy();
+    });
+}
 
-    // Prompt for room code to join
-    promptForRoomCode() {
-        // Create simple UI for entering room code
-        const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
-            .setOrigin(0)
-            .setInteractive();
+// Prompt for room code to join
+promptForRoomCode() {
+    // Create simple UI for entering room code
+    const overlay = this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.7)
+        .setOrigin(0)
+        .setInteractive();
+    
+    const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
+        .setStrokeStyle(2, 0xFFFFFF);
+    
+    const titleText = this.add.text(1024/2, 768/2 - 100, 'Enter Room Code:', {
+        fontSize: '24px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5);
+    
+    // Add a manual input field using graphics and text
+    let inputCode = '';
+    const maxCodeLength = 4;
+    
+    // Create a text field for the code
+    const codeText = this.add.text(1024/2, 768/2, '', {
+        fontSize: '48px',
+        fontStyle: 'bold',
+        fill: '#FFFF00',
+        backgroundColor: '#000000',
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5);
+    
+    // Add an instruction text
+    const instructionText = this.add.text(1024/2, 768/2 + 60, 'Type the 4-digit code', {
+        fontSize: '18px',
+        fill: '#FFFFFF'
+    }).setOrigin(0.5);
+    
+    // Add control info text
+    const controlInfoText = this.add.text(1024/2, 768/2 + 85, 'You\'ll use W,A,S,D and Space/Shift/C controls', {
+        fontSize: '14px',
+        fill: '#FFFF00'
+    }).setOrigin(0.5);
+    
+    // Check if we're on mobile
+    const isMobileDevice = window.isMobile && window.isMobile();
+    
+    // Create HTML input for mobile devices
+    let inputElement = null;
+    
+    if (isMobileDevice) {
+        // Create an HTML input element for mobile
+        inputElement = document.createElement('input');
+        inputElement.type = 'text';
+        inputElement.maxLength = maxCodeLength;
+        inputElement.style.position = 'absolute';
+        inputElement.style.top = '50%';
+        inputElement.style.left = '50%';
+        inputElement.style.transform = 'translate(-50%, -50%)';
+        inputElement.style.fontSize = '28px';
+        inputElement.style.textAlign = 'center';
+        inputElement.style.width = '150px';
+        inputElement.style.padding = '10px';
+        inputElement.style.border = '2px solid white';
+        inputElement.style.backgroundColor = '#000';
+        inputElement.style.color = '#FFFF00';
         
-        const panel = this.add.rectangle(1024/2, 768/2, 400, 300, 0x333333)
-            .setStrokeStyle(2, 0xFFFFFF);
+        // Add to DOM
+        document.body.appendChild(inputElement);
         
-        const titleText = this.add.text(1024/2, 768/2 - 100, 'Enter Room Code:', {
-            fontSize: '24px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
+        // Focus the input
+        setTimeout(() => inputElement.focus(), 100);
         
-        // Add a manual input field using graphics and text
-        let inputCode = '';
-        const maxCodeLength = 4;
-        
-        // Create a text field for the code
-        const codeText = this.add.text(1024/2, 768/2, '', {
-            fontSize: '48px',
-            fontStyle: 'bold',
-            fill: '#FFFF00',
-            backgroundColor: '#000000',
-            padding: { x: 20, y: 10 }
-        }).setOrigin(0.5);
-        
-        // Add an instruction text
-        const instructionText = this.add.text(1024/2, 768/2 + 60, 'Type the 4-digit code', {
-            fontSize: '18px',
-            fill: '#FFFFFF'
-        }).setOrigin(0.5);
-        
-        // Set up keyboard input for the code
+        // Update code text when input changes
+        inputElement.addEventListener('input', () => {
+            inputCode = inputElement.value.toUpperCase();
+            codeText.setText(inputCode);
+        });
+    } else {
+        // Desktop keyboard input
         const keyboardListener = this.input.keyboard.on('keydown', (event) => {
             // Handle backspace
             if (event.key === 'Backspace') {
@@ -270,47 +319,70 @@ export default class MenuScene extends Phaser.Scene {
             // Update the displayed code
             codeText.setText(inputCode);
         });
-        
-        // Join button
-        const joinButton = this.createButton(1024/2, 768/2 + 120, 'Join', 150, 40, () => {
-            if (inputCode.length === maxCodeLength) {
-                // Remove keyboard listener
-                this.input.keyboard.removeListener('keydown', keyboardListener);
-                
-                // Attempt to join the game
-                this.game.networking.joinGame(inputCode);
-                
-                // Show connecting message
-                titleText.setText('Connecting...');
-                codeText.setVisible(false);
-                instructionText.setText('Connecting to opponent...');
-                joinButton.button.setVisible(false);
-                joinButton.text.setVisible(false);
-                cancelButton.button.setVisible(false);
-                cancelButton.text.setVisible(false);
-            } else {
-                // Show error for incomplete code
-                instructionText.setText('Please enter a 4-digit code').setFill('#FF0000');
-            }
-        });
-        
-        // Cancel button
-        const cancelButton = this.createButton(1024/2, 768/2 + 180, 'Cancel', 150, 40, () => {
-            // Remove keyboard listener
-            this.input.keyboard.removeListener('keydown', keyboardListener);
-            
-            // Clean up UI elements
-            overlay.destroy();
-            panel.destroy();
-            titleText.destroy();
-            codeText.destroy();
-            instructionText.destroy();
-            joinButton.button.destroy();
-            joinButton.text.destroy();
-            cancelButton.button.destroy();
-            cancelButton.text.destroy();
-        });
     }
+    
+    // Join button
+    const joinButton = this.createButton(1024/2, 768/2 + 140, 'Join', 150, 40, () => {
+        if (inputCode.length === maxCodeLength) {
+            // Clean up input
+            if (isMobileDevice && inputElement) {
+                document.body.removeChild(inputElement);
+                inputElement = null;
+            } else if (this.input.keyboard.listeners) {
+                // Remove keyboard listener for desktop
+                this.input.keyboard.removeAllListeners('keydown');
+            }
+            
+            // Attempt to join the game
+            this.game.networking.joinGame(inputCode);
+            
+            // Show connecting message
+            titleText.setText('Connecting...');
+            codeText.setVisible(false);
+            instructionText.setText('Connecting to opponent...');
+            controlInfoText.setText('Use W,A,S,D keys to move and Space/Shift/C for actions');
+            controlInfoText.setFill('#FFFF00');
+            joinButton.button.setVisible(false);
+            joinButton.text.setVisible(false);
+            cancelButton.button.setVisible(false);
+            cancelButton.text.setVisible(false);
+        } else {
+            // Show error for incomplete code
+            instructionText.setText('Please enter a 4-digit code').setFill('#FF0000');
+        }
+    });
+    
+    // Cancel button
+    const cancelButton = this.createButton(1024/2, 768/2 + 190, 'Cancel', 150, 40, () => {
+        // Clean up input
+        if (isMobileDevice && inputElement) {
+            document.body.removeChild(inputElement);
+            inputElement = null;
+        } else if (this.input.keyboard.listeners) {
+            // Remove keyboard listener for desktop
+            this.input.keyboard.removeAllListeners('keydown');
+        }
+        
+        // Clean up UI elements
+        overlay.destroy();
+        panel.destroy();
+        titleText.destroy();
+        codeText.destroy();
+        instructionText.destroy();
+        controlInfoText.destroy();
+        joinButton.button.destroy();
+        joinButton.text.destroy();
+        cancelButton.button.destroy();
+        cancelButton.text.destroy();
+    });
+    
+    // Add an additional event listener to ensure cleanup
+    this.events.once('shutdown', () => {
+        if (isMobileDevice && inputElement && document.body.contains(inputElement)) {
+            document.body.removeChild(inputElement);
+        }
+    });
+}
     
     safeStartScene(sceneKey, data = {}) {
         console.log(`Safely starting scene: ${sceneKey}`);

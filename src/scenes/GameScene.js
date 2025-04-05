@@ -985,25 +985,14 @@ update(time, delta) {
         // Handle keyboard movement for local player
         if (!window.isMobile || !window.isMobile()) {
             if (localPlayer && localPlayer.canMove) {
-                if (this.isHost) {
-                    // Host uses WASD
-                    this.handlePlayerMovement(
-                        localPlayer,
-                        this.wasdKeys.W.isDown,
-                        this.wasdKeys.S.isDown,
-                        this.wasdKeys.A.isDown,
-                        this.wasdKeys.D.isDown
-                    );
-                } else {
-                    // Guest uses arrow keys
-                    this.handlePlayerMovement(
-                        localPlayer,
-                        this.arrowKeys.up.isDown,
-                        this.arrowKeys.down.isDown,
-                        this.arrowKeys.left.isDown,
-                        this.arrowKeys.right.isDown
-                    );
-                }
+                // Always use WASD keys regardless of host status
+                this.handlePlayerMovement(
+                    localPlayer,
+                    this.wasdKeys.W.isDown,
+                    this.wasdKeys.S.isDown,
+                    this.wasdKeys.A.isDown,
+                    this.wasdKeys.D.isDown
+                );
             }
         }
         
@@ -1070,10 +1059,10 @@ update(time, delta) {
 handleOnlinePlayerActions(localPlayer, remotePlayer) {
     if (!localPlayer || !remotePlayer || !this.actionKeys) return;
     
-    // Determine which action keys to use based on host status
-    const pushKey = this.isHost ? this.actionKeys.p1Push : this.actionKeys.p2Push;
-    const throwKey = this.isHost ? this.actionKeys.p1Throw : this.actionKeys.p2Throw;
-    const counterKey = this.isHost ? this.actionKeys.p1Counter : this.actionKeys.p2Counter;
+    // Always use p1 controls (WASD/space/shift/C) regardless of host status
+    const pushKey = this.actionKeys.p1Push;      // space
+    const throwKey = this.actionKeys.p1Throw;    // shift
+    const counterKey = this.actionKeys.p1Counter; // C
     
     // Push action
     if (Phaser.Input.Keyboard.JustDown(pushKey) && localPlayer.startPush()) {
