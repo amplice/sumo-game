@@ -196,11 +196,13 @@ export default class MenuScene extends Phaser.Scene {
             fill: '#FFFFFF'
         }).setOrigin(0.5);
         
+        // Display the code in a larger, more readable format
         const codeText = this.add.text(1024/2, 768/2, roomId, {
-            fontSize: '28px',
+            fontSize: '48px',
+            fontStyle: 'bold',
             fill: '#FFFF00',
             backgroundColor: '#000000',
-            padding: { x: 10, y: 5 }
+            padding: { x: 20, y: 10 }
         }).setOrigin(0.5);
         
         const infoText = this.add.text(1024/2, 768/2 + 60, 'Waiting for opponent...', {
@@ -235,35 +237,74 @@ export default class MenuScene extends Phaser.Scene {
             fill: '#FFFFFF'
         }).setOrigin(0.5);
         
-        // Use Phaser's DOM element to create an input box
-        const element = this.add.dom(1024/2, 768/2).createFromHTML(`
-            <input type="text" id="roomCode" style="width: 300px; padding: 10px; font-size: 18px; text-align: center;">
-        `);
+        // Add a manual input field using graphics and text
+        let inputCode = '';
+        const maxCodeLength = 4;
+        
+        // Create a text field for the code
+        const codeText = this.add.text(1024/2, 768/2, '', {
+            fontSize: '48px',
+            fontStyle: 'bold',
+            fill: '#FFFF00',
+            backgroundColor: '#000000',
+            padding: { x: 20, y: 10 }
+        }).setOrigin(0.5);
+        
+        // Add an instruction text
+        const instructionText = this.add.text(1024/2, 768/2 + 60, 'Type the 4-digit code', {
+            fontSize: '18px',
+            fill: '#FFFFFF'
+        }).setOrigin(0.5);
+        
+        // Set up keyboard input for the code
+        const keyboardListener = this.input.keyboard.on('keydown', (event) => {
+            // Handle backspace
+            if (event.key === 'Backspace') {
+                inputCode = inputCode.slice(0, -1);
+            } 
+            // Handle letters and numbers (limit to 4 characters)
+            else if (/^[a-zA-Z0-9]$/.test(event.key) && inputCode.length < maxCodeLength) {
+                inputCode += event.key.toUpperCase();
+            }
+            
+            // Update the displayed code
+            codeText.setText(inputCode);
+        });
         
         // Join button
-        const joinButton = this.createButton(1024/2, 768/2 + 80, 'Join', 150, 40, () => {
-            const input = document.getElementById('roomCode');
-            const roomId = input.value.trim();
-            
-            if (roomId) {
-                this.game.networking.joinGame(roomId);
+        const joinButton = this.createButton(1024/2, 768/2 + 120, 'Join', 150, 40, () => {
+            if (inputCode.length === maxCodeLength) {
+                // Remove keyboard listener
+                this.input.keyboard.removeListener('keydown', keyboardListener);
+                
+                // Attempt to join the game
+                this.game.networking.joinGame(inputCode);
                 
                 // Show connecting message
                 titleText.setText('Connecting...');
-                element.setVisible(false);
+                codeText.setVisible(false);
+                instructionText.setText('Connecting to opponent...');
                 joinButton.button.setVisible(false);
                 joinButton.text.setVisible(false);
                 cancelButton.button.setVisible(false);
                 cancelButton.text.setVisible(false);
+            } else {
+                // Show error for incomplete code
+                instructionText.setText('Please enter a 4-digit code').setFill('#FF0000');
             }
         });
         
         // Cancel button
-        const cancelButton = this.createButton(1024/2, 768/2 + 140, 'Cancel', 150, 40, () => {
+        const cancelButton = this.createButton(1024/2, 768/2 + 180, 'Cancel', 150, 40, () => {
+            // Remove keyboard listener
+            this.input.keyboard.removeListener('keydown', keyboardListener);
+            
+            // Clean up UI elements
             overlay.destroy();
             panel.destroy();
             titleText.destroy();
-            element.destroy();
+            codeText.destroy();
+            instructionText.destroy();
             joinButton.button.destroy();
             joinButton.text.destroy();
             cancelButton.button.destroy();
