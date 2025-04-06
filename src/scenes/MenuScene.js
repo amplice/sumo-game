@@ -50,40 +50,40 @@ export default class MenuScene extends Phaser.Scene {
         const scale = Math.max(scaleX, scaleY);
         backgroundImage.setScale(scale);
             
-        // Add sumo sprites to the menu for visual preview
-        const blueSumo = this.add.sprite(1024/2 - 100, 185, 'sumo_sprites', 'down_idle')
-            .setScale(gameConfig.player.spriteScale);
-        const redSumo = this.add.sprite(1024/2 + 100, 185, 'sumo_sprites', 'down_idle')
-            .setScale(gameConfig.player.spriteScale);
+        // // Add sumo sprites to the menu for visual preview
+        // const blueSumo = this.add.sprite(1024/2 - 100, 185, 'sumo_sprites', 'down_idle')
+        //     .setScale(gameConfig.player.spriteScale);
+        // const redSumo = this.add.sprite(1024/2 + 100, 185, 'sumo_sprites', 'down_idle')
+        //     .setScale(gameConfig.player.spriteScale);
         
-        // Create simple idle animations
-        if (!this.anims.exists('menu_blue_idle')) {
-            this.anims.create({
-                key: 'menu_blue_idle',
-                frames: [
-                    { key: 'sumo_sprites', frame: 'down_idle' },
-                    { key: 'sumo_sprites', frame: 'down_walk_0' }
-                ],
-                frameRate: 2,
-                repeat: -1
-            });
-        }
+        // // Create simple idle animations
+        // if (!this.anims.exists('menu_blue_idle')) {
+        //     this.anims.create({
+        //         key: 'menu_blue_idle',
+        //         frames: [
+        //             { key: 'sumo_sprites', frame: 'down_idle' },
+        //             { key: 'sumo_sprites', frame: 'down_walk_0' }
+        //         ],
+        //         frameRate: 2,
+        //         repeat: -1
+        //     });
+        // }
         
-        if (!this.anims.exists('menu_red_idle')) {
-            this.anims.create({
-                key: 'menu_red_idle',
-                frames: [
-                    { key: 'sumo_sprites', frame: 'down_idle' },
-                    { key: 'sumo_sprites', frame: 'down_walk_0' }
-                ],
-                frameRate: 2,
-                repeat: -1
-            });
-        }
+        // if (!this.anims.exists('menu_red_idle')) {
+        //     this.anims.create({
+        //         key: 'menu_red_idle',
+        //         frames: [
+        //             { key: 'sumo_sprites', frame: 'down_idle' },
+        //             { key: 'sumo_sprites', frame: 'down_walk_0' }
+        //         ],
+        //         frameRate: 2,
+        //         repeat: -1
+        //     });
+        // }
         
-        // Play the idle animations
-        blueSumo.play('menu_blue_idle');
-        redSumo.play('menu_red_idle');
+        // // Play the idle animations
+        // blueSumo.play('menu_blue_idle');
+        // redSumo.play('menu_red_idle');
     
         const logo = this.add.image(1024/2, 120, 'game_logo');
             logo.setScale(0.2); // Adjust scale as needed to fit your UI

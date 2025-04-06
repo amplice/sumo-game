@@ -442,45 +442,44 @@ counterWindupEffect.once('animationcomplete', () => {
     }
 
     activateCounter() {
-    if (this.isCounterWindingUp) {
-        this.isCounterWindingUp = false;
-        this.isCounterActive = true;
-        this.counterActiveTimer = 0;
-        this.canMove = false; // Still can't move during active counter
-         // Stop windup sound if it's playing
- 
-        
-        // Play counter activation sound
-        musicManager.playSFX(this.scene, 'counter_sound', { volume: 0.7 });
-        
-        // Ensure velocity is still zero when counter activates
-        this.setVelocity(0, 0);
-        
-        // Hide windup visual and show active visual
-        this.counterWindupCircle.setVisible(false);
-        this.counterActiveCircle.setVisible(true);
-        
-        // Reset to idle frame when counter becomes active
-        this.playIdleAnimation();
-        
-        // Create the counter activation effect at the player's position
-        const counterEffect = this.scene.add.sprite(this.x, this.y, 'counter_sprites');
-        counterEffect.setOrigin(0.5, 0.5);
-        counterEffect.setScale(1.2); // Make it a bit larger for visibility
-        
-        // Play the counter effect animation
-        counterEffect.play('counter_active_anim');
-        
-        // Set duration to match the counter active duration
-        // This ensures the animation exists for exactly the counter active period
-        this.scene.time.delayedCall(gameConfig.counter.activeDuration, () => {
-            counterEffect.destroy();
-        });
-        
-        return true;
+        if (this.isCounterWindingUp) {
+            this.isCounterWindingUp = false;
+            this.isCounterActive = true;
+            this.counterActiveTimer = 0;
+            this.canMove = false; // Still can't move during active counter
+            
+            // Play counter activation sound
+            musicManager.playSFX(this.scene, 'counter_sound', { volume: 0.7 });
+            
+            // Ensure velocity is still zero when counter activates
+            this.setVelocity(0, 0);
+            
+            // Hide windup visual and show active visual
+            this.counterWindupCircle.setVisible(false);
+            this.counterActiveCircle.setVisible(true);
+            
+            // Get base direction and flipping for counter active
+            const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+            
+            // Set the counter active frame
+            this.sprite.anims.stop();
+            this.sprite.setFrame(`${baseDirection}_counter_active`);
+            this.sprite.setFlipX(flipX);
+            
+            // Create the counter activation effect
+            const counterEffect = this.scene.add.sprite(this.x, this.y, 'counter_sprites');
+            counterEffect.setOrigin(0.5, 0.5);
+            counterEffect.setScale(1.2);
+            counterEffect.play('counter_active_anim');
+            
+            this.scene.time.delayedCall(gameConfig.counter.activeDuration, () => {
+                counterEffect.destroy();
+            });
+            
+            return true;
+        }
+        return false;
     }
-    return false;
-}
     
     // End counter (called when active period ends)
     endCounter() {
@@ -737,10 +736,19 @@ throwEndEffect.once('animationcomplete', () => {
                                 counterFeedback.activePulsateSpeed;
             this.counterActiveCircle.setScale(pulsateScale);
             
+            // Maintain the counter active frame during the entire active period
+            const { baseDirection, flipX } = this.getMirroredDirection(this.direction);
+            this.sprite.anims.stop();
+            this.sprite.setFrame(`${baseDirection}_counter_active`);
+            this.sprite.setFlipX(flipX);
+            
             // End counter when active period is over
             if (this.counterActiveTimer >= this.counterActiveDuration) {
                 this.endCounter();
             }
+            
+            // Skip remaining animation updates
+            return;
         }
         
         // Only update animation if not currently playing a non-looping animation
@@ -748,15 +756,16 @@ throwEndEffect.once('animationcomplete', () => {
         if (this.sprite.anims.currentAnim && 
             !this.sprite.anims.currentAnim.repeat && 
             this.sprite.anims.isPlaying &&
-            (this.sprite.anims.currentAnim.key.includes('push') || this.sprite.anims.currentAnim.key.includes('throw'))) {
+            (this.sprite.anims.currentAnim.key.includes('push') || 
+             this.sprite.anims.currentAnim.key.includes('throw'))) {
             // Animation is playing and non-looping (push or throw) - don't interrupt
             return;
         }
         
-// Skip animation updates during throw windup or counter windup
-if (this.isThrowWindingUp || this.isCounterWindingUp) {
-    return;
-}
+        // Skip animation updates during throw windup or counter windup
+        if (this.isThrowWindingUp || this.isCounterWindingUp) {
+            return;
+        }
         
         // Update animation based on movement if no special animation is playing
         if (this.sprite.body.velocity.x === 0 && this.sprite.body.velocity.y === 0) {
