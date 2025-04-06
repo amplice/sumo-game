@@ -85,8 +85,8 @@ export default class MenuScene extends Phaser.Scene {
         // blueSumo.play('menu_blue_idle');
         // redSumo.play('menu_red_idle');
     
-        const logo = this.add.image(1024/2, 120, 'game_logo');
-            logo.setScale(0.2); // Adjust scale as needed to fit your UI
+        const logo = this.add.image(1024/2, 150, 'game_logo');
+            logo.setScale(0.25); // Adjust scale as needed to fit your UI
     
         // Check if we're on mobile
         const isMobileDevice = window.isMobile && window.isMobile();
